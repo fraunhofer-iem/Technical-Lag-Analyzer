@@ -43,11 +43,11 @@ func SetUpLogging(logLevel int) *slog.Logger {
 	return logger
 }
 
-// validates output path and sets default tmpdir
+// ValidateOutPath validates output path and sets default tmpdir
 // as default value if *p == ""
 // p - path
 func ValidateOutPath(p *string) error {
-	// set default value if needed
+	// set the default value if needed
 	if *p == "" {
 		dir := os.TempDir()
 		*p = dir
@@ -65,12 +65,12 @@ func ValidateOutPath(p *string) error {
 	return nil
 }
 
-// validates input path and sets a current working dir
+// ValidateInPath validates an input path and sets a current working dir
 // as default value if *p == ""
 // p - path
 func ValidateInPath(p *string) (os.FileInfo, error) {
 
-	// set default value if needed
+	// set the default value if needed
 	if *p == "" {
 		dir, err := os.Getwd()
 		if err != nil {
@@ -89,7 +89,7 @@ func ValidateInPath(p *string) (os.FileInfo, error) {
 func main() {
 
 	start := time.Now()
-	// get input path and check for correctness
+	// get an input path and check for correctness
 	flag.Parse()
 
 	logger := SetUpLogging(*logLevel)

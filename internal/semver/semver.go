@@ -100,53 +100,65 @@ func GetVersionDistance(usedVersion string, versions []string) (*VersionDistance
 }
 
 func GetLibyear(usedVersion string, versions []deps.Version) (*time.Duration, error) {
+
 	usedSemver, err := newRelaxedSemver(usedVersion)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse usedVersion %s: %w", usedVersion, err)
 	}
 
-	var semVers []*version.Version
+	validVersions := make([]deps.Version, 0, len(versions))
 	for _, v := range versions {
+		// Skip versions without a publication date.
 		if v.PublishedAt == "" {
-			slog.Default().Warn("No publishedAt for", "version", v)
+			slog.Default().Warn("Skipping version with no PublishedAt", "version", v.Version)
 			continue
 		}
-		semVer, err := newRelaxedSemver(v.Version)
-		if err != nil {
-			slog.Default().Warn("Failed to parse semver", "version", v)
-			continue
-		}
-		if semVer.Prerelease() != "" {
 
+		sv, err := newRelaxedSemver(v.Version)
+		if err != nil {
+			slog.Default().Warn("Skipping unparsable semver", "version", v.Version)
 			continue
 		}
-		semVers = append(semVers, semVer)
+
+		// Skip pre-release versions.
+		if sv.Prerelease() != "" {
+			continue
+		}
+
+		validVersions = append(validVersions, v)
 	}
 
-	slices.SortFunc(semVers, func(a *version.Version, b *version.Version) int {
-		if a == nil || b == nil {
-			return 0
-		}
-		return a.Compare(b)
+	if len(validVersions) == 0 {
+		return nil, fmt.Errorf("no valid, non-prerelease versions found")
+	}
+
+	slices.SortFunc(validVersions, func(a, b deps.Version) int {
+		semverA, _ := newRelaxedSemver(a.Version)
+		semverB, _ := newRelaxedSemver(b.Version)
+		return semverA.Compare(semverB)
 	})
 
-	i := sort.Search(len(semVers),
-		func(i int) bool { return semVers[i].Equal(usedSemver) })
+	idx := slices.IndexFunc(validVersions, func(v deps.Version) bool {
+		sv, _ := newRelaxedSemver(v.Version)
+		return sv.Equal(usedSemver)
+	})
 
-	if i == len(semVers) {
-		return nil, fmt.Errorf("usedVersion %s not found in versions array", usedVersion)
+	if idx == -1 {
+		return nil, fmt.Errorf("usedVersion %s not found among valid versions", usedVersion)
 	}
 
-	usedTime, err := versions[i].Time()
+	usedTime, err := validVersions[idx].Time()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse time for used version %s: %w", validVersions[idx].Version, err)
 	}
-	newest, err := versions[len(versions)-1].Time()
+
+	// The newest version is the last element of the sorted slice.
+	newestVersion := validVersions[len(validVersions)-1]
+	newestTime, err := newestVersion.Time()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse time for newest version %s: %w", newestVersion.Version, err)
 	}
 
-	duration := newest.Sub(usedTime)
-
+	duration := newestTime.Sub(usedTime)
 	return &duration, nil
 }

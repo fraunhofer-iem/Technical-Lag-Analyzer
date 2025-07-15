@@ -1,0 +1,197 @@
+package semver
+
+import (
+	"fmt"
+	"sbom-technical-lag/internal/deps"
+	"testing"
+	"time"
+)
+
+func TestVersionDistanceValidUsedVersionNotContained(t *testing.T) {
+	usedVersion := "1.0.0"
+	versions := []string{"1.0.1", "0.1.0", "0.2.0", "2.0.3", "1.2.0", "1.2.3"}
+
+	d, err := GetVersionDistance(usedVersion, versions)
+	if err != nil {
+		t.Fatalf("no error expected")
+	}
+
+	if d.MissedReleases != 4 {
+		t.Fatalf("unexpected number of missed releases. Expected 4, got %d", d.MissedReleases)
+	}
+
+	if d.MissedMajor != 1 {
+		t.Fatalf("unexpected number of missed major releases. Expected 1, got %d", d.MissedMajor)
+	}
+	if d.MissedMinor != 0 {
+		t.Fatalf("unexpected number of missed minor releases. Expected 0, got %d", d.MissedMinor)
+	}
+
+	if d.MissedPatch != 3 {
+		t.Fatalf("unexpected number of missed patch releases. Expected 3, got %d", d.MissedPatch)
+	}
+}
+
+func TestVersionDistanceValidUsedVersion(t *testing.T) {
+	usedVersion := "1.0.0"
+	versions := []string{"0.1.0", "1.0.0", "0.2.0", "1.0.1", "1.2.0", "1.2.3", "2.0.3"}
+
+	d, err := GetVersionDistance(usedVersion, versions)
+	if err != nil {
+		t.Fatalf("no error expected")
+	}
+
+	if d.MissedReleases != 4 {
+		t.Fatalf("unexpected number of missed releases. Expected 4, got %d", d.MissedReleases)
+	}
+
+	if d.MissedMajor != 1 {
+		t.Fatalf("unexpected number of missed major releases. Expected 1, got %d", d.MissedMajor)
+	}
+	if d.MissedMinor != 0 {
+		t.Fatalf("unexpected number of missed minor releases. Expected 0, got %d", d.MissedMinor)
+	}
+
+	if d.MissedPatch != 3 {
+		t.Fatalf("unexpected number of missed patch releases. Expected 3, got %d", d.MissedPatch)
+	}
+}
+
+func TestVersionDistanceWeiredVersions(t *testing.T) {
+	usedVersion := "1.0.0"
+	// 1.6.5+git20160407+5e5d3-1 <- fails with NewVersion
+	// 2.5.1.ds1-4 <- fails with NewVersion and NewSemver
+	// 4.6.0+git+20171230-2 <- fails with NewVersion
+	// 4.2+dfsg-0.1+deb7u4 <- fails with NewVersion
+
+	versions := []string{"0.1.4.bo", "1.0.0+123", "v0.2.0", "1.0.1-meta.bla", "1.2.0.sha253.214.dsf", "1.2.3", "2.0.3"}
+
+	d, err := GetVersionDistance(usedVersion, versions)
+	if err != nil {
+		t.Fatalf("no error expected")
+	}
+
+	if d.MissedReleases != 4 {
+		t.Fatalf("unexpected number of missed releases. Expected 4, got %d", d.MissedReleases)
+	}
+
+	if d.MissedMajor != 1 {
+		t.Fatalf("unexpected number of missed major releases. Expected 1, got %d", d.MissedMajor)
+	}
+	if d.MissedMinor != 0 {
+		t.Fatalf("unexpected number of missed minor releases. Expected 0, got %d", d.MissedMinor)
+	}
+
+	if d.MissedPatch != 3 {
+		t.Fatalf("unexpected number of missed patch releases. Expected 3, got %d", d.MissedPatch)
+	}
+}
+
+func TestVersionParsing(t *testing.T) {
+	// versions from our test set
+	// 1.6.5+git20160407+5e5d3-1 <- fails with NewVersion
+	// 2.5.1.ds1-4 <- fails with NewVersion and NewSemver
+	// 4.6.0+git+20171230-2 <- fails with NewVersion
+	// 4.2+dfsg-0.1+deb7u4 <- fails with NewVersion
+	versions := []string{"0.1.4.bo", "2.5.1.ds1-4", "v0.2.0", "1.0.1-meta.bla", "1.2.0.sha253.214.dsf", "4.6.0+git+20171230-2", "4.2+dfsg-0.1+deb7u4"}
+
+	for _, v := range versions {
+
+		v, err := newRelaxedSemver(v)
+		if err != nil {
+			t.Fatalf("Parsing failed %s\n", err)
+		}
+
+		fmt.Printf("%+v\n", v)
+
+	}
+}
+
+func TestGetLibyearSuccess(t *testing.T) {
+	usedVersion := "1.0.0"
+	versions := []deps.Version{
+		{Version: "0.9.0", PublishedAt: "2020-06-15T10:30:00Z"},
+		{Version: "1.0.0", PublishedAt: "2021-01-20T14:45:30Z"},
+		{Version: "1.1.0", PublishedAt: "2021-08-05T09:15:45Z"},
+		{Version: "2.0.0", PublishedAt: "2022-03-18T16:20:10Z"},
+	}
+
+	libyear, err := GetLibyear(usedVersion, versions)
+	if err != nil {
+		t.Fatalf("no error expected, got: %v", err)
+	}
+
+	if libyear == nil {
+		t.Fatalf("expected non-nil libyear")
+	}
+
+	// Calculate expected duration between used version (1.0.0) and newest version (2.0.0)
+	usedTime, _ := time.Parse(time.RFC3339, "2021-01-20T14:45:30Z")
+	newestTime, _ := time.Parse(time.RFC3339, "2022-03-18T16:20:10Z")
+	expectedDuration := newestTime.Sub(usedTime)
+
+	if *libyear != expectedDuration {
+		t.Fatalf("unexpected libyear duration. Expected %v, got %v", expectedDuration, *libyear)
+	}
+}
+
+func TestGetLibyearVersionNotFound(t *testing.T) {
+	usedVersion := "1.0.0"
+	versions := []deps.Version{
+		{Version: "0.9.0", PublishedAt: "2020-05-12T08:45:20Z"},
+		{Version: "1.1.0", PublishedAt: "2021-11-03T12:30:15Z"},
+		{Version: "2.0.0", PublishedAt: "2022-07-22T17:10:05Z"},
+	}
+
+	_, err := GetLibyear(usedVersion, versions)
+	if err == nil {
+		t.Fatalf("expected error for version not found")
+	}
+}
+
+func TestGetLibyearEmptyVersions(t *testing.T) {
+	usedVersion := "1.0.0"
+	versions := []deps.Version{}
+
+	_, err := GetLibyear(usedVersion, versions)
+	if err == nil {
+		t.Fatalf("expected error for empty versions array")
+	}
+}
+
+func TestGetLibyearInvalidUsedVersion(t *testing.T) {
+	usedVersion := "invalid.version"
+	versions := []deps.Version{
+		{Version: "0.9.0", PublishedAt: "2020-03-25T11:20:30Z"},
+		{Version: "1.0.0", PublishedAt: "2021-09-14T15:40:55Z"},
+	}
+
+	_, err := GetLibyear(usedVersion, versions)
+	if err == nil {
+		t.Fatalf("expected error for invalid used version")
+	}
+}
+
+func TestGetLibyearWithPrereleaseVersions(t *testing.T) {
+	usedVersion := "1.0.0"
+	versions := []deps.Version{
+		{Version: "0.9.0", PublishedAt: "2020-10-05T13:25:40Z"},
+		{Version: "1.0.0", PublishedAt: "2021-04-18T09:50:15Z"},
+		{Version: "1.1.0-beta", PublishedAt: "2021-07-30T16:35:20Z"}, // This should be filtered out
+		{Version: "2.0.0", PublishedAt: "2022-01-12T11:05:30Z"},
+	}
+
+	libyear, err := GetLibyear(usedVersion, versions)
+	if err != nil {
+		t.Fatalf("no error expected, got: %v", err)
+	}
+
+	// Calculate expected duration between used version (1.0.0) and newest version (2.0.0)
+	usedTime, _ := time.Parse(time.RFC3339, "2021-04-18T09:50:15Z")
+	newestTime, _ := time.Parse(time.RFC3339, "2022-01-12T11:05:30Z")
+	expectedDuration := newestTime.Sub(usedTime)
+
+	if *libyear != expectedDuration {
+		t.Fatalf("unexpected libyear duration. Expected %v, got %v", expectedDuration, *libyear)
+	}
+}

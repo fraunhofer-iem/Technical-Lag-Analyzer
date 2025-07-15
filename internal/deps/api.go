@@ -17,7 +17,7 @@ type Version struct {
 }
 
 func (v *Version) Time() (time.Time, error) {
-	layout := "2021-03-14T15:51:35Z"
+	layout := time.RFC3339
 	return time.Parse(layout, v.PublishedAt)
 
 }
@@ -44,7 +44,7 @@ func GetVersions(rawPurl string) (*DepsApiResponse, error) {
 
 	system, name := getNameAndSystem(purl)
 	if system == "" || name == "" {
-		return nil, fmt.Errorf("Get name and system returned empty %+v", purl)
+		return nil, fmt.Errorf("get name and system returned empty %+v", purl)
 	}
 
 	// GET /v3/systems/{packageKey.system}/packages/{packageKey.name}

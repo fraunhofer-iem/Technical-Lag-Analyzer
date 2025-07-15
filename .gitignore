@@ -1,0 +1,8 @@
+.DS_STORE
+example
+out
+js
+.env
+*.log
+bin
+.idea
