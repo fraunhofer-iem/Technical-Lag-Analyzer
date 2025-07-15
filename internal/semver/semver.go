@@ -81,7 +81,7 @@ func GetVersionDistance(usedVersion string, versions []string) (*VersionDistance
 	}
 
 	if i < len(semVers) && !semVers[i].Equal(usedSemver) {
-		// x is not present in data,
+		// x is not present in the data,
 		// but i is the index where it would be inserted.
 		semVers = slices.Insert(semVers, i, usedSemver)
 	}

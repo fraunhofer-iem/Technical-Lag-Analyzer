@@ -22,7 +22,7 @@ func (v *Version) Time() (time.Time, error) {
 
 }
 
-type DepsApiResponse struct {
+type ApiResponse struct {
 	Versions []VersionsApiResponse `json:"versions"`
 }
 
@@ -31,7 +31,7 @@ type VersionsApiResponse struct {
 	PublishedAt string  `bson:"publishedAt" json:"publishedAt"`
 }
 
-func GetVersions(rawPurl string) (*DepsApiResponse, error) {
+func GetVersions(rawPurl string) (*ApiResponse, error) {
 
 	purl, err := packageurl.FromString(rawPurl)
 
@@ -42,7 +42,7 @@ func GetVersions(rawPurl string) (*DepsApiResponse, error) {
 
 	slog.Default().Debug("Deps.dev api query started", "purl", purl)
 
-	system, name := getNameAndSystem(purl)
+	name, system := getNameAndSystem(purl)
 	if system == "" || name == "" {
 		return nil, fmt.Errorf("get name and system returned empty %+v", purl)
 	}
@@ -67,7 +67,7 @@ func GetVersions(rawPurl string) (*DepsApiResponse, error) {
 		return nil, err
 	}
 
-	var deps DepsApiResponse
+	var deps ApiResponse
 	decoder := json.NewDecoder(resp.Body)
 	if err := decoder.Decode(&deps); err != nil {
 		slog.Default().Debug("Decoding of response failed", "url", url, "err", err.Error())
@@ -77,15 +77,16 @@ func GetVersions(rawPurl string) (*DepsApiResponse, error) {
 	return &deps, nil
 }
 
-func getNameAndSystem(purl packageurl.PackageURL) (name, system string) {
+func getNameAndSystem(purl packageurl.PackageURL) (string, string) {
 	namespace := purl.Namespace
 	if namespace != "" {
 		namespace = namespace + "/"
 	}
 
-	// deps.dev sytem:
-	// Can be one of GO, RUBYGEMS, NPM, CARGO, MAVEN, PYPI, NUGET.
-	name = namespace + purl.Name
+	// deps.dev system:
+	// Can be one of GO, RUBYGEMS, NPM, CARGO, MAVEN, PYPI, NUGET
+	name := namespace + purl.Name
+	system := ""
 	switch purl.Type {
 	case packageurl.TypeNPM:
 		system = "npm"

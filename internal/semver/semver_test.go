@@ -125,7 +125,7 @@ func TestGetLibyearSuccess(t *testing.T) {
 		t.Fatalf("expected non-nil libyear")
 	}
 
-	// Calculate expected duration between used version (1.0.0) and newest version (2.0.0)
+	// Calculate expected duration between used version (1.0.0) and the newest version (2.0.0)
 	usedTime, _ := time.Parse(time.RFC3339, "2021-01-20T14:45:30Z")
 	newestTime, _ := time.Parse(time.RFC3339, "2022-03-18T16:20:10Z")
 	expectedDuration := newestTime.Sub(usedTime)
@@ -186,7 +186,7 @@ func TestGetLibyearWithPrereleaseVersions(t *testing.T) {
 		t.Fatalf("no error expected, got: %v", err)
 	}
 
-	// Calculate expected duration between used version (1.0.0) and newest version (2.0.0)
+	// Calculate expected duration between used version (1.0.0) and the newest version (2.0.0)
 	usedTime, _ := time.Parse(time.RFC3339, "2021-04-18T09:50:15Z")
 	newestTime, _ := time.Parse(time.RFC3339, "2022-01-12T11:05:30Z")
 	expectedDuration := newestTime.Sub(usedTime)

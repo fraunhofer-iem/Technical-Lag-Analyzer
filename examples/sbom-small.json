@@ -1,0 +1,864 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:327a97d0-4132-4808-955d-87bd7fc47631",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-07-14T12:52:33.582Z",
+    "lifecycles": [
+      {
+        "phase": "build"
+      }
+    ],
+    "tools": [
+      {
+        "vendor": "npm",
+        "name": "cli",
+        "version": "11.4.2"
+      }
+    ],
+    "component": {
+      "bom-ref": "spha-visualization@0.0.0",
+      "type": "library",
+      "name": "spha-visualization",
+      "version": "0.0.0",
+      "scope": "required",
+      "purl": "pkg:npm/spha-visualization@0.0.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:private",
+          "value": "true"
+        }
+      ],
+      "externalReferences": []
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "@babel/helper-string-parser@7.27.1",
+      "type": "library",
+      "name": "@babel/helper-string-parser",
+      "version": "7.27.1",
+      "scope": "required",
+      "author": "The Babel Team",
+      "description": "A utility package to parse strings",
+      "purl": "pkg:npm/%40babel/helper-string-parser@7.27.1",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@babel/helper-string-parser/-/helper-string-parser-7.27.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/babel/babel.git"
+        },
+        {
+          "type": "website",
+          "url": "https://babel.dev/docs/en/next/babel-helper-string-parser"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/babel/babel/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a8c952c4a6e946502b89d0c4c64f769d2a1bc837693e28d4ab60d6ea80e752a77488e1b19908f2aa13088a123dfb3bf82cfc997518ded9c6af58f6c26d69b778"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@babel/helper-validator-identifier@7.27.1",
+      "type": "library",
+      "name": "@babel/helper-validator-identifier",
+      "version": "7.27.1",
+      "scope": "required",
+      "author": "The Babel Team",
+      "description": "Validate identifier/keywords name",
+      "purl": "pkg:npm/%40babel/helper-validator-identifier@7.27.1",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@babel/helper-validator-identifier/-/helper-validator-identifier-7.27.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/babel/babel.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/babel/babel#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/babel/babel/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "0f684ff5e03e4aac75901660cf1661d32d6dadbb94f89a03922130aa1437ea7a1d62a270c842213d274c35dee53a6ff88a8ef696e4cf587db461d6b4c4eb94a3"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@babel/parser@7.27.7",
+      "type": "library",
+      "name": "@babel/parser",
+      "version": "7.27.7",
+      "scope": "required",
+      "author": "The Babel Team",
+      "description": "A JavaScript parser",
+      "purl": "pkg:npm/%40babel/parser@7.27.7",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@babel/parser/-/parser-7.27.7.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/babel/babel.git"
+        },
+        {
+          "type": "website",
+          "url": "https://babel.dev/docs/en/next/babel-parser"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/babel/babel/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3A%22pkg%3A+parser+%28babylon%29%22+is%3Aopen"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "aa7cd7cc35ddaffa68ddb3936d321067bf93c4d2b1a643792227d52d74beafbab0ca79197cfca365f13b8425dba3b2283bd4cd712ca26e038db1fd876ae51ddd"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@babel/types@7.27.7",
+      "type": "library",
+      "name": "@babel/types",
+      "version": "7.27.7",
+      "scope": "required",
+      "author": "The Babel Team",
+      "description": "Babel Types is a Lodash-esque utility library for AST nodes",
+      "purl": "pkg:npm/%40babel/types@7.27.7",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@babel/types/-/types-7.27.7.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/babel/babel.git"
+        },
+        {
+          "type": "website",
+          "url": "https://babel.dev/docs/en/next/babel-types"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/babel/babel/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3A%22pkg%3A%20types%22+is%3Aopen"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f0e2d080349c00e1d79c0cf6715f917f3ccd322a6e2d5073d9b8ae00914c57d6df90d7f7f778dedd533c08b923428756e7e896b1225d4a04964faaec6685c73f"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@esbuild/darwin-arm64@0.25.5",
+      "type": "library",
+      "name": "@esbuild/darwin-arm64",
+      "version": "0.25.5",
+      "scope": "optional",
+      "description": "The macOS ARM 64-bit binary for esbuild, a JavaScript bundler.",
+      "purl": "pkg:npm/%40esbuild/darwin-arm64@0.25.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.25.5.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/evanw/esbuild.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/evanw/esbuild#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/evanw/esbuild/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1ad68181a9a656f745eda3c8807da3c4c0dd8af7b3805bba88aa664fee3cf85f07860e49fec7e70e27a0d1a786fe37d2be4610536fe971e14f0ca96a673c277d"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@jridgewell/sourcemap-codec@1.5.2",
+      "type": "library",
+      "name": "@jridgewell/sourcemap-codec",
+      "version": "1.5.2",
+      "scope": "required",
+      "author": "Justin Ridgewell",
+      "description": "Encode/decode sourcemap mappings",
+      "purl": "pkg:npm/%40jridgewell/sourcemap-codec@1.5.2",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.2.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/jridgewell/sourcemaps.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/jridgewell/sourcemaps/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "80a621782ca52c879d23e0926680ed1a4155f58101c5145571f087ece7c0aa1e13c94c918c413a59513f6970d75f4a7c0487bf4202dc680a08d36db429144582"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@kurkle/color@0.3.4",
+      "type": "library",
+      "name": "@kurkle/color",
+      "version": "0.3.4",
+      "scope": "required",
+      "author": "Jukka Kurkela",
+      "description": "css color parsing, manupulation and conversion",
+      "purl": "pkg:npm/%40kurkle/color@0.3.4",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@kurkle/color/-/color-0.3.4.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/kurkle/color.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/kurkle/color#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/kurkle/color/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3395249d93c746edc31035a88a953ab04f0f76467a67f4bebf8743f8a7bc21a365a5d4906a1e74973d4ab5c1416b6bec74e9f06db9f127054ce30b72eae740e7"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@parcel/watcher@2.5.1",
+      "type": "library",
+      "name": "@parcel/watcher",
+      "version": "2.5.1",
+      "scope": "optional",
+      "description": "A native C++ Node module for querying and subscribing to filesystem events. Used by Parcel 2.",
+      "purl": "pkg:npm/%40parcel/watcher@2.5.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@parcel/watcher/-/watcher-2.5.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/parcel-bundler/watcher.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/parcel-bundler/watcher#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/parcel-bundler/watcher/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "75f5270b188df47e1aa7ce03bc3dae6e3c3edef50da6cb716b44e7798fcf69ab7c6b7478b906432d2bd68e6ce7018fc3a1a86a4c797d578e8717f66cdc5dbda6"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "vue-tsc@2.2.10",
+      "type": "library",
+      "name": "vue-tsc",
+      "version": "2.2.10",
+      "scope": "optional",
+      "purl": "pkg:npm/vue-tsc@2.2.10",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/vue-tsc/-/vue-tsc-2.2.10.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/language-tools.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/language-tools#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/language-tools/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8d6675c5268d6da6c4577c21a480cc6e355255ac230325bec759f725e190a3b4b4bafda7f45fc9320596f74b4658d1512b26b863028c6600adaf4bd100cec379"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "spha-visualization@0.0.0",
+      "dependsOn": [
+        "@popperjs/core@2.11.8",
+        "bootstrap@5.3.7",
+        "bootstrap-icons@1.13.1",
+        "chart.js@4.5.0",
+        "chartjs-plugin-annotation@3.1.0",
+        "vue@3.5.17",
+        "@types/node@24.0.7",
+        "@vitejs/plugin-vue@6.0.0",
+        "@vue/tsconfig@0.7.0",
+        "sass@1.89.2",
+        "typescript@5.8.3",
+        "vite@7.0.0",
+        "vite-plugin-singlefile@2.3.0",
+        "vue-tsc@2.2.10"
+      ]
+    },
+    {
+      "ref": "@babel/helper-string-parser@7.27.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "@babel/helper-validator-identifier@7.27.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "@babel/parser@7.27.7",
+      "dependsOn": ["@babel/types@7.27.7"]
+    },
+    {
+      "ref": "@babel/types@7.27.7",
+      "dependsOn": [
+        "@babel/helper-string-parser@7.27.1",
+        "@babel/helper-validator-identifier@7.27.1"
+      ]
+    },
+    {
+      "ref": "@esbuild/darwin-arm64@0.25.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@jridgewell/sourcemap-codec@1.5.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@kurkle/color@0.3.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "@parcel/watcher@2.5.1",
+      "dependsOn": [
+        "detect-libc@1.0.3",
+        "is-glob@4.0.3",
+        "micromatch@4.0.8",
+        "node-addon-api@7.1.1",
+        "@parcel/watcher-darwin-arm64@2.5.1"
+      ]
+    },
+    {
+      "ref": "@parcel/watcher-darwin-arm64@2.5.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "@popperjs/core@2.11.8",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/pluginutils@1.0.0-beta.19",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rollup/rollup-darwin-arm64@4.44.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "@types/estree@1.0.8",
+      "dependsOn": []
+    },
+    {
+      "ref": "@types/node@24.0.7",
+      "dependsOn": ["undici-types@7.8.0"]
+    },
+    {
+      "ref": "@vitejs/plugin-vue@6.0.0",
+      "dependsOn": [
+        "vite@7.0.0",
+        "vue@3.5.17",
+        "@rolldown/pluginutils@1.0.0-beta.19"
+      ]
+    },
+    {
+      "ref": "@volar/language-core@2.4.15",
+      "dependsOn": ["@volar/source-map@2.4.15"]
+    },
+    {
+      "ref": "@volar/source-map@2.4.15",
+      "dependsOn": []
+    },
+    {
+      "ref": "@volar/typescript@2.4.15",
+      "dependsOn": [
+        "@volar/language-core@2.4.15",
+        "path-browserify@1.0.1",
+        "vscode-uri@3.1.0"
+      ]
+    },
+    {
+      "ref": "@vue/compiler-core@3.5.17",
+      "dependsOn": [
+        "@babel/parser@7.27.7",
+        "entities@4.5.0",
+        "estree-walker@2.0.2",
+        "source-map-js@1.2.1",
+        "@vue/shared@3.5.17"
+      ]
+    },
+    {
+      "ref": "@vue/compiler-dom@3.5.17",
+      "dependsOn": ["@vue/shared@3.5.17", "@vue/compiler-core@3.5.17"]
+    },
+    {
+      "ref": "@vue/compiler-sfc@3.5.17",
+      "dependsOn": [
+        "@babel/parser@7.27.7",
+        "estree-walker@2.0.2",
+        "magic-string@0.30.17",
+        "postcss@8.5.6",
+        "source-map-js@1.2.1",
+        "@vue/compiler-dom@3.5.17",
+        "@vue/compiler-core@3.5.17",
+        "@vue/compiler-ssr@3.5.17",
+        "@vue/shared@3.5.17"
+      ]
+    },
+    {
+      "ref": "@vue/compiler-ssr@3.5.17",
+      "dependsOn": ["@vue/shared@3.5.17", "@vue/compiler-dom@3.5.17"]
+    },
+    {
+      "ref": "@vue/compiler-vue2@2.7.16",
+      "dependsOn": ["de-indent@1.0.2", "he@1.2.0"]
+    },
+    {
+      "ref": "@vue/language-core@2.2.10",
+      "dependsOn": [
+        "typescript@5.8.3",
+        "@volar/language-core@2.4.15",
+        "@vue/compiler-dom@3.5.17",
+        "@vue/compiler-vue2@2.7.16",
+        "@vue/shared@3.5.17",
+        "alien-signals@1.0.13",
+        "minimatch@9.0.5",
+        "muggle-string@0.4.1",
+        "path-browserify@1.0.1"
+      ]
+    },
+    {
+      "ref": "@vue/reactivity@3.5.17",
+      "dependsOn": ["@vue/shared@3.5.17"]
+    },
+    {
+      "ref": "@vue/runtime-core@3.5.17",
+      "dependsOn": ["@vue/shared@3.5.17", "@vue/reactivity@3.5.17"]
+    },
+    {
+      "ref": "@vue/runtime-dom@3.5.17",
+      "dependsOn": [
+        "csstype@3.1.3",
+        "@vue/reactivity@3.5.17",
+        "@vue/shared@3.5.17",
+        "@vue/runtime-core@3.5.17"
+      ]
+    },
+    {
+      "ref": "@vue/server-renderer@3.5.17",
+      "dependsOn": [
+        "vue@3.5.17",
+        "@vue/shared@3.5.17",
+        "@vue/compiler-ssr@3.5.17"
+      ]
+    },
+    {
+      "ref": "@vue/shared@3.5.17",
+      "dependsOn": []
+    },
+    {
+      "ref": "@vue/tsconfig@0.7.0",
+      "dependsOn": ["typescript@5.8.3", "vue@3.5.17"]
+    },
+    {
+      "ref": "ajv@8.17.1",
+      "dependsOn": [
+        "fast-deep-equal@3.1.3",
+        "fast-uri@3.0.6",
+        "json-schema-traverse@1.0.0",
+        "require-from-string@2.0.2"
+      ]
+    },
+    {
+      "ref": "alien-signals@1.0.13",
+      "dependsOn": []
+    },
+    {
+      "ref": "balanced-match@1.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "bootstrap@5.3.7",
+      "dependsOn": ["@popperjs/core@2.11.8"]
+    },
+    {
+      "ref": "bootstrap-icons@1.13.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "brace-expansion@2.0.2",
+      "dependsOn": ["balanced-match@1.0.2"]
+    },
+    {
+      "ref": "braces@3.0.3",
+      "dependsOn": ["fill-range@7.1.1"]
+    },
+    {
+      "ref": "chart.js@4.5.0",
+      "dependsOn": ["@kurkle/color@0.3.4"]
+    },
+    {
+      "ref": "chartjs-plugin-annotation@3.1.0",
+      "dependsOn": ["chart.js@4.5.0"]
+    },
+    {
+      "ref": "chokidar@4.0.3",
+      "dependsOn": ["readdirp@4.1.2"]
+    },
+    {
+      "ref": "csstype@3.1.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "de-indent@1.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "detect-libc@1.0.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "entities@4.5.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "esbuild@0.25.5",
+      "dependsOn": ["@esbuild/darwin-arm64@0.25.5"]
+    },
+    {
+      "ref": "estree-walker@2.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "fast-deep-equal@3.1.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "fast-uri@3.0.6",
+      "dependsOn": []
+    },
+    {
+      "ref": "fdir@6.4.6",
+      "dependsOn": ["picomatch@4.0.2"]
+    },
+    {
+      "ref": "fill-range@7.1.1",
+      "dependsOn": ["to-regex-range@5.0.1"]
+    },
+    {
+      "ref": "fsevents@2.3.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "he@1.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "immutable@5.1.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "is-extglob@2.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "is-glob@4.0.3",
+      "dependsOn": ["is-extglob@2.1.1"]
+    },
+    {
+      "ref": "is-number@7.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "json-schema-traverse@1.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "magic-string@0.30.17",
+      "dependsOn": ["@jridgewell/sourcemap-codec@1.5.2"]
+    },
+    {
+      "ref": "micromatch@4.0.8",
+      "dependsOn": ["braces@3.0.3", "picomatch@2.3.1"]
+    },
+    {
+      "ref": "picomatch@2.3.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "minimatch@9.0.5",
+      "dependsOn": ["brace-expansion@2.0.2"]
+    },
+    {
+      "ref": "muggle-string@0.4.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "nanoid@3.3.11",
+      "dependsOn": []
+    },
+    {
+      "ref": "node-addon-api@7.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "path-browserify@1.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "picocolors@1.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "picomatch@4.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "postcss@8.5.6",
+      "dependsOn": ["nanoid@3.3.11", "picocolors@1.1.1", "source-map-js@1.2.1"]
+    },
+    {
+      "ref": "readdirp@4.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "require-from-string@2.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "rollup@4.44.1",
+      "dependsOn": [
+        "@types/estree@1.0.8",
+        "fsevents@2.3.3",
+        "@rollup/rollup-darwin-arm64@4.44.1"
+      ]
+    },
+    {
+      "ref": "sass@1.89.2",
+      "dependsOn": [
+        "chokidar@4.0.3",
+        "immutable@5.1.3",
+        "source-map-js@1.2.1",
+        "@parcel/watcher@2.5.1"
+      ]
+    },
+    {
+      "ref": "source-map-js@1.2.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "tinyglobby@0.2.14",
+      "dependsOn": ["fdir@6.4.6", "picomatch@4.0.2"]
+    },
+    {
+      "ref": "to-regex-range@5.0.1",
+      "dependsOn": ["is-number@7.0.0"]
+    },
+    {
+      "ref": "typescript@5.8.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "undici-types@7.8.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "vite@7.0.0",
+      "dependsOn": [
+        "@types/node@24.0.7",
+        "sass@1.89.2",
+        "esbuild@0.25.5",
+        "fdir@6.4.6",
+        "picomatch@4.0.2",
+        "postcss@8.5.6",
+        "rollup@4.44.1",
+        "tinyglobby@0.2.14",
+        "fsevents@2.3.3"
+      ]
+    },
+    {
+      "ref": "vite-plugin-singlefile@2.3.0",
+      "dependsOn": ["rollup@4.44.1", "vite@7.0.0", "micromatch@4.0.8"]
+    },
+    {
+      "ref": "vscode-uri@3.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "vue@3.5.17",
+      "dependsOn": [
+        "typescript@5.8.3",
+        "@vue/shared@3.5.17",
+        "@vue/runtime-dom@3.5.17",
+        "@vue/compiler-dom@3.5.17",
+        "@vue/compiler-sfc@3.5.17",
+        "@vue/server-renderer@3.5.17"
+      ]
+    },
+    {
+      "ref": "vue-tsc@2.2.10",
+      "dependsOn": [
+        "typescript@5.8.3",
+        "@volar/typescript@2.4.15",
+        "@vue/language-core@2.2.10"
+      ]
+    }
+  ]
+}
