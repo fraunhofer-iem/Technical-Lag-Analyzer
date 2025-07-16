@@ -169,6 +169,12 @@ func getDirectDeps(bom *cdx.BOM) ([]cdx.Component, error) {
 		return deps[i].Ref == projectRef
 	})
 
+	// Check if the index is valid and the element at that index matches the condition
+	if i >= len(deps) || deps[i].Ref != projectRef {
+		slog.Default().Warn("Project reference not found in dependencies", "ref", projectRef)
+		return []cdx.Component{}, fmt.Errorf("project reference not found in dependencies")
+	}
+
 	if deps[i].Dependencies == nil {
 		slog.Default().Warn("No direct dependencies found in bom")
 		return []cdx.Component{}, fmt.Errorf("no direct dependencies found in bom")
