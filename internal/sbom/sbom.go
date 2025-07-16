@@ -4,7 +4,6 @@ import (
 	"fmt"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"log/slog"
-	"sort"
 )
 
 func GetDirectDeps(bom *cdx.BOM) ([]cdx.Component, error) {
@@ -17,15 +16,16 @@ func GetDirectDeps(bom *cdx.BOM) ([]cdx.Component, error) {
 
 	deps := *bom.Dependencies
 
-	i := sort.Search(len(deps), func(idx int) bool {
-		if idx == 0 {
-			slog.Default().Warn("No dependencies found in bom")
+	// Use a linear search to find the project reference in dependencies
+	var i int
+	for i = 0; i < len(deps); i++ {
+		if deps[i].Ref == projectRef {
+			break
 		}
-		return deps[idx].Ref == projectRef
-	})
+	}
 
 	// Check if the index is valid and the element at that index matches the condition
-	if i >= len(deps) || deps[i].Ref != projectRef {
+	if i >= len(deps) {
 		slog.Default().Warn("Project reference not found in dependencies", "ref", projectRef)
 		return []cdx.Component{}, fmt.Errorf("project reference not found in dependencies")
 	}
