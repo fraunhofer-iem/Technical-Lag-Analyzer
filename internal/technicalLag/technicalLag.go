@@ -1,4 +1,4 @@
-package libyear
+package technicalLag
 
 import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
