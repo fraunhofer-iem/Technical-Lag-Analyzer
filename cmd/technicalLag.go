@@ -2,12 +2,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"log/slog"
 	"os"
+	"sbom-technical-lag/internal/sbom"
 	"sbom-technical-lag/internal/technicalLag"
-	"sort"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -117,7 +116,7 @@ func main() {
 		}
 	}
 
-	directDeps, err := getDirectDeps(bom)
+	directDeps, err := sbom.GetDirectDeps(bom)
 	if err != nil {
 		logger.Warn("Failed to get direct dependencies", "err", err)
 	}
@@ -151,48 +150,4 @@ func main() {
 
 	elapsed := time.Since(start)
 	logger.Info("Finished libyear calculation", "time elapsed", elapsed)
-}
-
-func getDirectDeps(bom *cdx.BOM) ([]cdx.Component, error) {
-	projectRef := bom.Metadata.Component.BOMRef
-	if projectRef == "" {
-		slog.Default().Warn("No project reference found in bom")
-	}
-	if bom.Dependencies == nil || bom.Components == nil {
-		slog.Default().Warn("No dependencies found in bom")
-		return []cdx.Component{}, fmt.Errorf("no dependencies found in bom")
-	}
-
-	deps := *bom.Dependencies
-
-	i := sort.Search(len(deps), func(i int) bool {
-		return deps[i].Ref == projectRef
-	})
-
-	// Check if the index is valid and the element at that index matches the condition
-	if i >= len(deps) || deps[i].Ref != projectRef {
-		slog.Default().Warn("Project reference not found in dependencies", "ref", projectRef)
-		return []cdx.Component{}, fmt.Errorf("project reference not found in dependencies")
-	}
-
-	if deps[i].Dependencies == nil {
-		slog.Default().Warn("No direct dependencies found in bom")
-		return []cdx.Component{}, fmt.Errorf("no direct dependencies found in bom")
-	}
-
-	directDepsRef := make(map[string]struct{})
-	for _, dep := range *deps[i].Dependencies {
-		directDepsRef[dep] = struct{}{}
-	}
-
-	components := *bom.Components
-
-	directDeps := make([]cdx.Component, 0, len(directDepsRef))
-	for _, c := range components {
-		if _, found := directDepsRef[c.BOMRef]; found {
-			directDeps = append(directDeps, c)
-		}
-	}
-
-	return directDeps, nil
 }
