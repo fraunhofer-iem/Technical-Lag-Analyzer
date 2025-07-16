@@ -66,11 +66,13 @@ func ValidateInPath(p *string) (os.FileInfo, error) {
 }
 
 type TechLagStats struct {
-	Libdays               float64 `json:"libdays"`
-	MissedReleases        int64   `json:"missedReleases"`
-	NumComponents         int     `json:"numComponents"`
-	HighestLibdays        float64 `json:"highestLibdays"`
-	HighestMissedReleases int64   `json:"highestMissedReleases"`
+	Libdays                        float64       `json:"libdays"`
+	MissedReleases                 int64         `json:"missedReleases"`
+	NumComponents                  int           `json:"numComponents"`
+	HighestLibdays                 float64       `json:"highestLibdays"`
+	HighestMissedReleases          int64         `json:"highestMissedReleases"`
+	ComponentHighestMissedReleases cdx.Component `json:"componentHighestMissedReleases"`
+	ComponentHighestLibdays        cdx.Component `json:"componentHighestLibdays"`
 }
 
 type Result struct {
@@ -79,6 +81,15 @@ type Result struct {
 	DirectOpt  TechLagStats `json:"directOptional"`
 	DirectProd TechLagStats `json:"directProduction"`
 	Timestamp  int64        `json:"timestamp"`
+}
+
+// updateTechLagStats updates the TechLagStats fields with the given technical lag information
+func updateTechLagStats(stats *TechLagStats, libdays float64, missedReleases int64) {
+	stats.Libdays += libdays
+	stats.MissedReleases += missedReleases
+	stats.NumComponents++
+	stats.HighestLibdays = max(stats.HighestLibdays, libdays)
+	stats.HighestMissedReleases = max(stats.HighestMissedReleases, missedReleases)
 }
 
 func main() {
@@ -124,17 +135,9 @@ func main() {
 
 	for k, v := range cm {
 		if k.Scope == "" || k.Scope == "required" {
-			result.Prod.Libdays += v.Libdays
-			result.Prod.MissedReleases += v.VersionDistance.MissedReleases
-			result.Prod.NumComponents++
-			result.Prod.HighestMissedReleases = max(result.Prod.HighestMissedReleases, v.VersionDistance.MissedReleases)
-			result.Prod.HighestLibdays = max(result.Prod.HighestLibdays, v.Libdays)
+			updateTechLagStats(&result.Prod, v.Libdays, v.VersionDistance.MissedReleases)
 		} else {
-			result.Opt.Libdays += v.Libdays
-			result.Opt.MissedReleases += v.VersionDistance.MissedReleases
-			result.Opt.NumComponents++
-			result.Opt.HighestLibdays = max(result.Opt.HighestLibdays, v.Libdays)
-			result.Opt.HighestMissedReleases = max(result.Opt.HighestMissedReleases, v.VersionDistance.MissedReleases)
+			updateTechLagStats(&result.Opt, v.Libdays, v.VersionDistance.MissedReleases)
 		}
 	}
 
@@ -146,17 +149,9 @@ func main() {
 	for _, dep := range directDeps {
 		tl := cm[dep]
 		if dep.Scope == "" || dep.Scope == "required" {
-			result.DirectProd.Libdays += tl.Libdays
-			result.DirectProd.MissedReleases += tl.VersionDistance.MissedReleases
-			result.DirectProd.NumComponents++
-			result.DirectProd.HighestMissedReleases = max(result.DirectProd.HighestMissedReleases, tl.VersionDistance.MissedReleases)
-			result.DirectProd.HighestLibdays = max(result.DirectProd.HighestLibdays, tl.Libdays)
+			updateTechLagStats(&result.DirectProd, tl.Libdays, tl.VersionDistance.MissedReleases)
 		} else {
-			result.DirectOpt.Libdays += tl.Libdays
-			result.DirectOpt.MissedReleases += tl.VersionDistance.MissedReleases
-			result.DirectOpt.HighestMissedReleases = max(result.DirectOpt.HighestMissedReleases, tl.VersionDistance.MissedReleases)
-			result.DirectOpt.NumComponents++
-			result.DirectOpt.HighestLibdays = max(result.DirectOpt.HighestLibdays, tl.Libdays)
+			updateTechLagStats(&result.DirectOpt, tl.Libdays, tl.VersionDistance.MissedReleases)
 		}
 	}
 
