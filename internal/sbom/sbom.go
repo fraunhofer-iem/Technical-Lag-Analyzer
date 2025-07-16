@@ -16,7 +16,6 @@ func GetDirectDeps(bom *cdx.BOM) ([]cdx.Component, error) {
 
 	deps := *bom.Dependencies
 
-	// Use a linear search to find the project reference in dependencies
 	var i int
 	for i = 0; i < len(deps); i++ {
 		if deps[i].Ref == projectRef {

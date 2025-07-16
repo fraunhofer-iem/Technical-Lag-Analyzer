@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"log/slog"
@@ -64,6 +65,22 @@ func ValidateInPath(p *string) (os.FileInfo, error) {
 	return f, nil
 }
 
+type TechLagStats struct {
+	Libdays               float64 `json:"libdays"`
+	MissedReleases        int64   `json:"missedReleases"`
+	NumComponents         int     `json:"numComponents"`
+	HighestLibdays        float64 `json:"highestLibdays"`
+	HighestMissedReleases int64   `json:"highestMissedReleases"`
+}
+
+type Result struct {
+	Opt        TechLagStats `json:"optional"`
+	Prod       TechLagStats `json:"production"`
+	DirectOpt  TechLagStats `json:"directOptional"`
+	DirectProd TechLagStats `json:"directProduction"`
+	Timestamp  int64        `json:"timestamp"`
+}
+
 func main() {
 
 	start := time.Now()
@@ -97,22 +114,27 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var libdaysOpt float64
-	var libdaysProd float64
-	var missedReleasesProd int64
-	var missedReleasesOpt int64
-	numComponentsProd := 0
-	numComponentsOpt := 0
+	// Initialize Result struct to track all statistics
+	result := Result{
+		Opt:        TechLagStats{},
+		Prod:       TechLagStats{},
+		DirectOpt:  TechLagStats{},
+		DirectProd: TechLagStats{},
+	}
 
 	for k, v := range cm {
 		if k.Scope == "" || k.Scope == "required" {
-			libdaysProd += v.Libdays
-			missedReleasesProd += v.VersionDistance.MissedReleases
-			numComponentsProd++
+			result.Prod.Libdays += v.Libdays
+			result.Prod.MissedReleases += v.VersionDistance.MissedReleases
+			result.Prod.NumComponents++
+			result.Prod.HighestMissedReleases = max(result.Prod.HighestMissedReleases, v.VersionDistance.MissedReleases)
+			result.Prod.HighestLibdays = max(result.Prod.HighestLibdays, v.Libdays)
 		} else {
-			libdaysOpt += v.Libdays
-			missedReleasesOpt += v.VersionDistance.MissedReleases
-			numComponentsOpt++
+			result.Opt.Libdays += v.Libdays
+			result.Opt.MissedReleases += v.VersionDistance.MissedReleases
+			result.Opt.NumComponents++
+			result.Opt.HighestLibdays = max(result.Opt.HighestLibdays, v.Libdays)
+			result.Opt.HighestMissedReleases = max(result.Opt.HighestMissedReleases, v.VersionDistance.MissedReleases)
 		}
 	}
 
@@ -121,32 +143,58 @@ func main() {
 		logger.Warn("Failed to get direct dependencies", "err", err)
 	}
 
-	var libdaysDirectOpt float64
-	var libdaysDirectProd float64
-	var missedReleasesDirectProd int64
-	var missedReleasesDirectOpt int64
-	numDirectComponentsProd := 0
-	numDirectComponentsOpt := 0
 	for _, dep := range directDeps {
 		tl := cm[dep]
 		if dep.Scope == "" || dep.Scope == "required" {
-			libdaysDirectProd += tl.Libdays
-			missedReleasesDirectProd += tl.VersionDistance.MissedReleases
-			numDirectComponentsProd++
+			result.DirectProd.Libdays += tl.Libdays
+			result.DirectProd.MissedReleases += tl.VersionDistance.MissedReleases
+			result.DirectProd.NumComponents++
+			result.DirectProd.HighestMissedReleases = max(result.DirectProd.HighestMissedReleases, tl.VersionDistance.MissedReleases)
+			result.DirectProd.HighestLibdays = max(result.DirectProd.HighestLibdays, tl.Libdays)
 		} else {
-			libdaysDirectOpt += tl.Libdays
-			missedReleasesDirectOpt += tl.VersionDistance.MissedReleases
-			numDirectComponentsOpt++
+			result.DirectOpt.Libdays += tl.Libdays
+			result.DirectOpt.MissedReleases += tl.VersionDistance.MissedReleases
+			result.DirectOpt.HighestMissedReleases = max(result.DirectOpt.HighestMissedReleases, tl.VersionDistance.MissedReleases)
+			result.DirectOpt.NumComponents++
+			result.DirectOpt.HighestLibdays = max(result.DirectOpt.HighestLibdays, tl.Libdays)
 		}
 	}
 
-	logger.Info("Number components", "prod", numComponentsProd, "opt", numComponentsOpt)
-	logger.Info("Libdays", "prod", libdaysProd, "opt", libdaysOpt)
-	logger.Info("Missed releases", "prod", missedReleasesProd, "opt", missedReleasesOpt)
+	result.Timestamp = time.Now().Unix()
 
-	logger.Info("Number direct components", "prod", numDirectComponentsProd, "opt", numDirectComponentsOpt)
-	logger.Info("Libdays direct", "prod", libdaysDirectProd, "opt", libdaysDirectOpt)
-	logger.Info("Missed releases direct", "prod", missedReleasesDirectProd, "opt", missedReleasesDirectOpt)
+	logger.Info("Number components", "prod", result.Prod.NumComponents, "opt", result.Opt.NumComponents)
+	logger.Info("Libdays", "prod", result.Prod.Libdays, "opt", result.Opt.Libdays)
+	logger.Info("Missed releases", "prod", result.Prod.MissedReleases, "opt", result.Opt.MissedReleases)
+
+	logger.Info("Number direct components", "prod", result.DirectProd.NumComponents, "opt", result.DirectOpt.NumComponents)
+	logger.Info("Libdays direct", "prod", result.DirectProd.Libdays, "opt", result.DirectOpt.Libdays)
+	logger.Info("Missed releases direct", "prod", result.DirectProd.MissedReleases, "opt", result.DirectOpt.MissedReleases)
+
+	// Store results in a file if the out path is provided
+	if *out != "" {
+		resultFile, err := os.Create(*out)
+		if err != nil {
+			logger.Error("Failed to create output file", "err", err)
+		} else {
+			defer resultFile.Close()
+
+			// Marshal the result to JSON
+			jsonData, err := json.MarshalIndent(result, "", "  ")
+			if err != nil {
+				logger.Error("Failed to marshal result to JSON", "err", err)
+				return
+			}
+
+			// Write JSON data to the file
+			_, err = resultFile.Write(jsonData)
+			if err != nil {
+				logger.Error("Failed to write JSON data to file", "err", err)
+				return
+			}
+
+			logger.Info("Results written to file in JSON format", "path", *out)
+		}
+	}
 
 	elapsed := time.Since(start)
 	logger.Info("Finished libyear calculation", "time elapsed", elapsed)
