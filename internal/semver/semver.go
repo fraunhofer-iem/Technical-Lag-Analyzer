@@ -63,6 +63,10 @@ func GetVersionDistance(usedVersion string, versions []string) (*VersionDistance
 			fmt.Printf("can't parse %s to semver\n", v)
 			continue
 		}
+		// Skip pre-release versions.
+		if semVer.Prerelease() != "" {
+			continue
+		}
 		semVers = append(semVers, semVer)
 	}
 
