@@ -2,8 +2,9 @@ package sbom
 
 import (
 	"fmt"
-	cdx "github.com/CycloneDX/cyclonedx-go"
 	"log/slog"
+
+	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
 func GetDirectDeps(bom *cdx.BOM) ([]cdx.Component, error) {

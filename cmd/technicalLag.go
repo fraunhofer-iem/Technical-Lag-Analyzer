@@ -3,13 +3,13 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	cdx "github.com/CycloneDX/cyclonedx-go"
 	"log"
 	"log/slog"
 	"os"
-	"sbom-technical-lag/internal/sbom"
 	"sbom-technical-lag/internal/technicalLag"
 	"time"
+
+	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
 var in = flag.String("in", "", "Path to SBOM")
@@ -64,39 +64,6 @@ func ValidateInPath(p *string) (os.FileInfo, error) {
 	return f, nil
 }
 
-type TechLagStats struct {
-	Libdays                        float64       `json:"libdays"`
-	MissedReleases                 int64         `json:"missedReleases"`
-	NumComponents                  int           `json:"numComponents"`
-	HighestLibdays                 float64       `json:"highestLibdays"`
-	HighestMissedReleases          int64         `json:"highestMissedReleases"`
-	ComponentHighestMissedReleases cdx.Component `json:"componentHighestMissedReleases,omitempty"`
-	ComponentHighestLibdays        cdx.Component `json:"componentHighestLibdays,omitempty"`
-}
-
-type Result struct {
-	Opt        TechLagStats `json:"optional"`
-	Prod       TechLagStats `json:"production"`
-	DirectOpt  TechLagStats `json:"directOptional"`
-	DirectProd TechLagStats `json:"directProduction"`
-	Timestamp  int64        `json:"timestamp"`
-}
-
-// updateTechLagStats updates the TechLagStats fields with the given technical lag information
-func updateTechLagStats(stats *TechLagStats, libdays float64, missedReleases int64, c cdx.Component) {
-	stats.Libdays += libdays
-	stats.MissedReleases += missedReleases
-	stats.NumComponents++
-	if missedReleases > stats.HighestMissedReleases {
-		stats.HighestMissedReleases = missedReleases
-		stats.ComponentHighestMissedReleases = c
-	}
-	if libdays > stats.HighestLibdays {
-		stats.HighestLibdays = libdays
-		stats.ComponentHighestLibdays = c
-	}
-}
-
 func main() {
 
 	start := time.Now()
@@ -118,7 +85,7 @@ func main() {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(file, cdx.BOMFileFormatJSON)
 	if err = decoder.Decode(bom); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	if bom.Components == nil {
@@ -130,45 +97,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Initialize Result struct to track all statistics
-	result := Result{
-		Opt:        TechLagStats{},
-		Prod:       TechLagStats{},
-		DirectOpt:  TechLagStats{},
-		DirectProd: TechLagStats{},
-	}
-
-	for k, v := range cm {
-		if k.Scope == "" || k.Scope == "required" {
-			updateTechLagStats(&result.Prod, v.Libdays, v.VersionDistance.MissedReleases, k)
-		} else {
-			updateTechLagStats(&result.Opt, v.Libdays, v.VersionDistance.MissedReleases, k)
-		}
-	}
-
-	directDeps, err := sbom.GetDirectDeps(bom)
+	result, err := technicalLag.CreateResult(bom, cm)
 	if err != nil {
-		logger.Warn("Failed to get direct dependencies", "err", err)
+		log.Fatal(err)
 	}
+	logger.Info("Result", "details", result.String())
 
-	for _, dep := range directDeps {
-		tl := cm[dep]
-		if dep.Scope == "" || dep.Scope == "required" {
-			updateTechLagStats(&result.DirectProd, tl.Libdays, tl.VersionDistance.MissedReleases, dep)
-		} else {
-			updateTechLagStats(&result.DirectOpt, tl.Libdays, tl.VersionDistance.MissedReleases, dep)
-		}
-	}
-
-	result.Timestamp = time.Now().Unix()
-
-	logger.Info("Number components", "prod", result.Prod.NumComponents, "opt", result.Opt.NumComponents)
-	logger.Info("Libdays", "prod", result.Prod.Libdays, "opt", result.Opt.Libdays)
-	logger.Info("Missed releases", "prod", result.Prod.MissedReleases, "opt", result.Opt.MissedReleases)
-
-	logger.Info("Number direct components", "prod", result.DirectProd.NumComponents, "opt", result.DirectOpt.NumComponents)
-	logger.Info("Libdays direct", "prod", result.DirectProd.Libdays, "opt", result.DirectOpt.Libdays)
-	logger.Info("Missed releases direct", "prod", result.DirectProd.MissedReleases, "opt", result.DirectOpt.MissedReleases)
+	// Initialize Result struct to track all statistics
 
 	// Store results in a file if the out path is provided
 	if *out != "" {
