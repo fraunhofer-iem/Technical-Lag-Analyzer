@@ -3,14 +3,13 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	cdx "github.com/CycloneDX/cyclonedx-go"
 	"log"
 	"log/slog"
 	"os"
 	"sbom-technical-lag/internal/sbom"
 	"sbom-technical-lag/internal/technicalLag"
 	"time"
-
-	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
 var in = flag.String("in", "", "Path to SBOM")
@@ -71,8 +70,8 @@ type TechLagStats struct {
 	NumComponents                  int           `json:"numComponents"`
 	HighestLibdays                 float64       `json:"highestLibdays"`
 	HighestMissedReleases          int64         `json:"highestMissedReleases"`
-	ComponentHighestMissedReleases cdx.Component `json:"componentHighestMissedReleases"`
-	ComponentHighestLibdays        cdx.Component `json:"componentHighestLibdays"`
+	ComponentHighestMissedReleases cdx.Component `json:"componentHighestMissedReleases,omitempty"`
+	ComponentHighestLibdays        cdx.Component `json:"componentHighestLibdays,omitempty"`
 }
 
 type Result struct {
@@ -84,12 +83,18 @@ type Result struct {
 }
 
 // updateTechLagStats updates the TechLagStats fields with the given technical lag information
-func updateTechLagStats(stats *TechLagStats, libdays float64, missedReleases int64) {
+func updateTechLagStats(stats *TechLagStats, libdays float64, missedReleases int64, c cdx.Component) {
 	stats.Libdays += libdays
 	stats.MissedReleases += missedReleases
 	stats.NumComponents++
-	stats.HighestLibdays = max(stats.HighestLibdays, libdays)
-	stats.HighestMissedReleases = max(stats.HighestMissedReleases, missedReleases)
+	if missedReleases > stats.HighestMissedReleases {
+		stats.HighestMissedReleases = missedReleases
+		stats.ComponentHighestMissedReleases = c
+	}
+	if libdays > stats.HighestLibdays {
+		stats.HighestLibdays = libdays
+		stats.ComponentHighestLibdays = c
+	}
 }
 
 func main() {
@@ -135,9 +140,9 @@ func main() {
 
 	for k, v := range cm {
 		if k.Scope == "" || k.Scope == "required" {
-			updateTechLagStats(&result.Prod, v.Libdays, v.VersionDistance.MissedReleases)
+			updateTechLagStats(&result.Prod, v.Libdays, v.VersionDistance.MissedReleases, k)
 		} else {
-			updateTechLagStats(&result.Opt, v.Libdays, v.VersionDistance.MissedReleases)
+			updateTechLagStats(&result.Opt, v.Libdays, v.VersionDistance.MissedReleases, k)
 		}
 	}
 
@@ -149,9 +154,9 @@ func main() {
 	for _, dep := range directDeps {
 		tl := cm[dep]
 		if dep.Scope == "" || dep.Scope == "required" {
-			updateTechLagStats(&result.DirectProd, tl.Libdays, tl.VersionDistance.MissedReleases)
+			updateTechLagStats(&result.DirectProd, tl.Libdays, tl.VersionDistance.MissedReleases, dep)
 		} else {
-			updateTechLagStats(&result.DirectOpt, tl.Libdays, tl.VersionDistance.MissedReleases)
+			updateTechLagStats(&result.DirectOpt, tl.Libdays, tl.VersionDistance.MissedReleases, dep)
 		}
 	}
 
