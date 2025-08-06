@@ -18,79 +18,120 @@ type VersionDistance struct {
 	MissedPatch    int64
 }
 
+// parseSemver parses a version string into a semantic version
 func parseSemver(raw string) (*version.Version, error) {
-
 	if raw == "" {
-		return nil, fmt.Errorf("empty string")
+		return nil, fmt.Errorf("version string cannot be empty")
 	}
-
 	return version.NewVersion(raw)
 }
 
-func GetVersionDistance(usedVersion string, versions []string) (*VersionDistance, error) {
+// parseAndFilterVersions converts string versions to semver and filters out invalid/prerelease versions
+func parseAndFilterVersions(versions []string) ([]*version.Version, error) {
+	semVers := make([]*version.Version, 0, len(versions))
 
-	usedSemver, err := parseSemver(usedVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	var semVers []*version.Version
 	for _, v := range versions {
 		semVer, err := parseSemver(v)
 		if err != nil {
-			fmt.Printf("can't parse %s to semver\n", v)
+			slog.Default().Warn("Skipping unparsable version", "version", v, "error", err)
 			continue
 		}
-		// Skip pre-release versions.
+
+		// Skip pre-release versions
 		if semVer.Prerelease() != "" {
 			continue
 		}
+
 		semVers = append(semVers, semVer)
 	}
 
-	slices.SortFunc(semVers, func(a *version.Version, b *version.Version) int {
-		if a == nil || b == nil {
-			return 0
-		}
+	if len(semVers) == 0 {
+		return nil, fmt.Errorf("no valid, non-prerelease versions found")
+	}
+
+	// Sort versions in ascending order
+	slices.SortFunc(semVers, func(a, b *version.Version) int {
 		return a.Compare(b)
 	})
 
-	i := sort.Search(len(semVers),
-		func(i int) bool { return semVers[i].GreaterThanOrEqual(usedSemver) })
+	return semVers, nil
+}
 
-	if i == len(semVers) {
-		semVers = append(semVers, usedSemver)
+// findVersionIndex finds the index where usedVersion should be inserted in the sorted slice
+func findVersionIndex(sortedVersions []*version.Version, usedVersion *version.Version) int {
+	return sort.Search(len(sortedVersions), func(i int) bool {
+		return sortedVersions[i].GreaterThanOrEqual(usedVersion)
+	})
+}
+
+// insertVersionIfMissing inserts the used version into the sorted slice if it's not already present
+func insertVersionIfMissing(sortedVersions []*version.Version, usedVersion *version.Version, index int) ([]*version.Version, int) {
+	// If index is at the end, the used version is newer than all existing versions
+	if index == len(sortedVersions) {
+		return append(sortedVersions, usedVersion), index
 	}
 
-	if i < len(semVers) && !semVers[i].Equal(usedSemver) {
-		// x is not present in the data,
-		// but i is the index where it would be inserted.
-		semVers = slices.Insert(semVers, i, usedSemver)
+	// If the version at index is not equal to usedVersion, insert it
+	if !sortedVersions[index].Equal(usedVersion) {
+		return slices.Insert(sortedVersions, index, usedVersion), index
 	}
 
-	largestVersion := semVers[len(semVers)-1]
+	// Version already exists at the correct position
+	return sortedVersions, index
+}
 
-	// semVers[i] == usedSemver
-	missedReleases := (len(semVers) - 1) - i
+// calculateVersionDistance calculates the distance metrics between versions
+func calculateVersionDistance(sortedVersions []*version.Version, usedIndex int, usedVersion *version.Version) *VersionDistance {
+	missedReleases := len(sortedVersions) - 1 - usedIndex
+	latestVersion := sortedVersions[len(sortedVersions)-1]
+
+	usedSegments := usedVersion.Segments64()
+	latestSegments := latestVersion.Segments64()
+
+	// Ensure we have at least 3 segments (major.minor.patch)
+	if len(usedSegments) < 3 {
+		usedSegments = append(usedSegments, make([]int64, 3-len(usedSegments))...)
+	}
+	if len(latestSegments) < 3 {
+		latestSegments = append(latestSegments, make([]int64, 3-len(latestSegments))...)
+	}
 
 	return &VersionDistance{
 		MissedReleases: int64(missedReleases),
-		MissedMajor:    largestVersion.Segments64()[0] - usedSemver.Segments64()[0],
-		MissedMinor:    largestVersion.Segments64()[1] - usedSemver.Segments64()[1],
-		MissedPatch:    largestVersion.Segments64()[2] - usedSemver.Segments64()[2],
-	}, nil
+		MissedMajor:    latestSegments[0] - usedSegments[0],
+		MissedMinor:    latestSegments[1] - usedSegments[1],
+		MissedPatch:    latestSegments[2] - usedSegments[2],
+	}
 }
 
-func GetLibyear(usedVersion string, versions []deps.Version) (*time.Duration, error) {
+// GetVersionDistance calculates how far behind a used version is compared to available versions
+func GetVersionDistance(usedVersion string, versions []string) (*VersionDistance, error) {
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("no versions provided")
+	}
 
 	usedSemver, err := parseSemver(usedVersion)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse usedVersion %s: %w", usedVersion, err)
+		return nil, fmt.Errorf("failed to parse used version %q: %w", usedVersion, err)
 	}
 
+	sortedVersions, err := parseAndFilterVersions(versions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse versions: %w", err)
+	}
+
+	usedIndex := findVersionIndex(sortedVersions, usedSemver)
+	sortedVersions, usedIndex = insertVersionIfMissing(sortedVersions, usedSemver, usedIndex)
+
+	return calculateVersionDistance(sortedVersions, usedIndex, usedSemver), nil
+}
+
+// filterValidVersions filters out versions without publication dates or invalid semver
+func filterValidVersions(versions []deps.Version) ([]deps.Version, error) {
 	validVersions := make([]deps.Version, 0, len(versions))
+
 	for _, v := range versions {
-		// Skip versions without a publication date.
+		// Skip versions without a publication date
 		if v.PublishedAt == "" {
 			slog.Default().Warn("Skipping version with no PublishedAt", "version", v.Version)
 			continue
@@ -98,11 +139,11 @@ func GetLibyear(usedVersion string, versions []deps.Version) (*time.Duration, er
 
 		sv, err := parseSemver(v.Version)
 		if err != nil {
-			slog.Default().Warn("Skipping unparsable semver", "version", v.Version)
+			slog.Default().Warn("Skipping unparsable semver", "version", v.Version, "error", err)
 			continue
 		}
 
-		// Skip pre-release versions.
+		// Skip pre-release versions
 		if sv.Prerelease() != "" {
 			continue
 		}
@@ -114,31 +155,74 @@ func GetLibyear(usedVersion string, versions []deps.Version) (*time.Duration, er
 		return nil, fmt.Errorf("no valid, non-prerelease versions found")
 	}
 
-	slices.SortFunc(validVersions, func(a, b deps.Version) int {
-		semverA, _ := parseSemver(a.Version)
-		semverB, _ := parseSemver(b.Version)
+	return validVersions, nil
+}
+
+// sortVersionsBySemanticVersion sorts versions by their semantic version
+func sortVersionsBySemanticVersion(versions []deps.Version) {
+	slices.SortFunc(versions, func(a, b deps.Version) int {
+		semverA, errA := parseSemver(a.Version)
+		semverB, errB := parseSemver(b.Version)
+
+		// This shouldn't happen since we already filtered, but be safe
+		if errA != nil || errB != nil {
+			return 0
+		}
+
 		return semverA.Compare(semverB)
 	})
+}
 
-	idx := slices.IndexFunc(validVersions, func(v deps.Version) bool {
-		sv, _ := parseSemver(v.Version)
+// findUsedVersionIndex finds the index of the used version in the sorted slice
+func findUsedVersionIndex(sortedVersions []deps.Version, usedSemver *version.Version) (int, error) {
+	idx := slices.IndexFunc(sortedVersions, func(v deps.Version) bool {
+		sv, err := parseSemver(v.Version)
+		if err != nil {
+			return false
+		}
 		return sv.Equal(usedSemver)
 	})
 
 	if idx == -1 {
-		return nil, fmt.Errorf("usedVersion %s not found among valid versions", usedVersion)
+		return -1, fmt.Errorf("used version not found among valid versions")
 	}
 
-	usedTime, err := validVersions[idx].Time()
+	return idx, nil
+}
+
+// GetLibyear calculates the "libyear" metric - how old the used version is compared to the newest
+func GetLibyear(usedVersion string, versions []deps.Version) (*time.Duration, error) {
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("no versions provided")
+	}
+
+	usedSemver, err := parseSemver(usedVersion)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse time for used version %s: %w", validVersions[idx].Version, err)
+		return nil, fmt.Errorf("failed to parse used version %q: %w", usedVersion, err)
 	}
 
-	// The newest version is the last element of the sorted slice.
+	validVersions, err := filterValidVersions(versions)
+	if err != nil {
+		return nil, err
+	}
+
+	sortVersionsBySemanticVersion(validVersions)
+
+	usedIdx, err := findUsedVersionIndex(validVersions, usedSemver)
+	if err != nil {
+		return nil, fmt.Errorf("used version %q: %w", usedVersion, err)
+	}
+
+	usedTime, err := validVersions[usedIdx].Time()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse time for used version %q: %w", validVersions[usedIdx].Version, err)
+	}
+
+	// The newest version is the last element of the sorted slice
 	newestVersion := validVersions[len(validVersions)-1]
 	newestTime, err := newestVersion.Time()
 	if err != nil {
-		return nil, fmt.Errorf("could not parse time for newest version %s: %w", newestVersion.Version, err)
+		return nil, fmt.Errorf("failed to parse time for newest version %q: %w", newestVersion.Version, err)
 	}
 
 	duration := newestTime.Sub(usedTime)
