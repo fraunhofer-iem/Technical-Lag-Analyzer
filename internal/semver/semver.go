@@ -6,7 +6,6 @@ import (
 	"sbom-technical-lag/internal/deps"
 	"slices"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/go-version"
@@ -19,46 +18,25 @@ type VersionDistance struct {
 	MissedPatch    int64
 }
 
-func newRelaxedSemver(raw string) (*version.Version, error) {
+func parseSemver(raw string) (*version.Version, error) {
 
-	v, err := version.NewVersion(raw)
-	if err != nil {
-		// example: 1.6.5+git20160407+5e5d3-1
-		if strings.Count(raw, "+") > 1 {
-			split := strings.Split(raw, "+")
-			modified := split[0] + "+" + split[1]
-			for i := 2; i < len(split); i++ {
-				modified = modified + "-" + split[i]
-			}
-			return newRelaxedSemver(modified)
-		}
-		// example: 2.5.1.ds1-4
-		if strings.Count(raw, ".") > 2 {
-			split := strings.Split(raw, ".")
-			modified := split[0] + "." + split[1]
-
-			for i := 2; i < len(split); i++ {
-				modified = modified + "-" + split[i]
-			}
-			return newRelaxedSemver(modified)
-
-		}
-		return nil, err
+	if raw == "" {
+		return nil, fmt.Errorf("empty string")
 	}
 
-	return v, nil
+	return version.NewVersion(raw)
 }
 
 func GetVersionDistance(usedVersion string, versions []string) (*VersionDistance, error) {
 
-	usedSemver, err := newRelaxedSemver(usedVersion)
+	usedSemver, err := parseSemver(usedVersion)
 	if err != nil {
 		return nil, err
 	}
 
 	var semVers []*version.Version
 	for _, v := range versions {
-		semVer, err := newRelaxedSemver(v)
+		semVer, err := parseSemver(v)
 		if err != nil {
 			fmt.Printf("can't parse %s to semver\n", v)
 			continue
@@ -105,7 +83,7 @@ func GetVersionDistance(usedVersion string, versions []string) (*VersionDistance
 
 func GetLibyear(usedVersion string, versions []deps.Version) (*time.Duration, error) {
 
-	usedSemver, err := newRelaxedSemver(usedVersion)
+	usedSemver, err := parseSemver(usedVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse usedVersion %s: %w", usedVersion, err)
 	}
@@ -118,7 +96,7 @@ func GetLibyear(usedVersion string, versions []deps.Version) (*time.Duration, er
 			continue
 		}
 
-		sv, err := newRelaxedSemver(v.Version)
+		sv, err := parseSemver(v.Version)
 		if err != nil {
 			slog.Default().Warn("Skipping unparsable semver", "version", v.Version)
 			continue
@@ -137,13 +115,13 @@ func GetLibyear(usedVersion string, versions []deps.Version) (*time.Duration, er
 	}
 
 	slices.SortFunc(validVersions, func(a, b deps.Version) int {
-		semverA, _ := newRelaxedSemver(a.Version)
-		semverB, _ := newRelaxedSemver(b.Version)
+		semverA, _ := parseSemver(a.Version)
+		semverB, _ := parseSemver(b.Version)
 		return semverA.Compare(semverB)
 	})
 
 	idx := slices.IndexFunc(validVersions, func(v deps.Version) bool {
-		sv, _ := newRelaxedSemver(v.Version)
+		sv, _ := parseSemver(v.Version)
 		return sv.Equal(usedSemver)
 	})
 
