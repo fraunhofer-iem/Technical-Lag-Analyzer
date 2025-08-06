@@ -1,0 +1,303 @@
+{
+  "optional": {
+    "libdays": 154.68444444444444,
+    "missedReleases": 10,
+    "numComponents": 3,
+    "highestLibdays": 101.0109375,
+    "highestMissedReleases": 7,
+    "componentHighestMissedReleases": {
+      "bom-ref": "vue-tsc@2.2.10",
+      "type": "library",
+      "name": "vue-tsc",
+      "version": "2.2.10",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8d6675c5268d6da6c4577c21a480cc6e355255ac230325bec759f725e190a3b4b4bafda7f45fc9320596f74b4658d1512b26b863028c6600adaf4bd100cec379"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/vue-tsc@2.2.10",
+      "externalReferences": [
+        {
+          "url": "https://registry.npmjs.org/vue-tsc/-/vue-tsc-2.2.10.tgz",
+          "type": "distribution"
+        },
+        {
+          "url": "git+https://github.com/vuejs/language-tools.git",
+          "type": "vcs"
+        },
+        {
+          "url": "https://github.com/vuejs/language-tools#readme",
+          "type": "website"
+        },
+        {
+          "url": "https://github.com/vuejs/language-tools/issues",
+          "type": "issue-tracker"
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ]
+    },
+    "componentHighestLibdays": {
+      "bom-ref": "vue-tsc@2.2.10",
+      "type": "library",
+      "name": "vue-tsc",
+      "version": "2.2.10",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8d6675c5268d6da6c4577c21a480cc6e355255ac230325bec759f725e190a3b4b4bafda7f45fc9320596f74b4658d1512b26b863028c6600adaf4bd100cec379"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/vue-tsc@2.2.10",
+      "externalReferences": [
+        {
+          "url": "https://registry.npmjs.org/vue-tsc/-/vue-tsc-2.2.10.tgz",
+          "type": "distribution"
+        },
+        {
+          "url": "git+https://github.com/vuejs/language-tools.git",
+          "type": "vcs"
+        },
+        {
+          "url": "https://github.com/vuejs/language-tools#readme",
+          "type": "website"
+        },
+        {
+          "url": "https://github.com/vuejs/language-tools/issues",
+          "type": "issue-tracker"
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ]
+    }
+  },
+  "production": {
+    "libdays": 225.64706018518518,
+    "missedReleases": 7,
+    "numComponents": 6,
+    "highestLibdays": 190.49833333333333,
+    "highestMissedReleases": 3,
+    "componentHighestMissedReleases": {
+      "bom-ref": "@babel/types@7.27.7",
+      "type": "library",
+      "author": "The Babel Team",
+      "name": "@babel/types",
+      "version": "7.27.7",
+      "description": "Babel Types is a Lodash-esque utility library for AST nodes",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f0e2d080349c00e1d79c0cf6715f917f3ccd322a6e2d5073d9b8ae00914c57d6df90d7f7f778dedd533c08b923428756e7e896b1225d4a04964faaec6685c73f"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40babel/types@7.27.7",
+      "externalReferences": [
+        {
+          "url": "https://registry.npmjs.org/@babel/types/-/types-7.27.7.tgz",
+          "type": "distribution"
+        },
+        {
+          "url": "git+https://github.com/babel/babel.git",
+          "type": "vcs"
+        },
+        {
+          "url": "https://babel.dev/docs/en/next/babel-types",
+          "type": "website"
+        },
+        {
+          "url": "https://github.com/babel/babel/issues?utf8=%E2%9C%93\u0026q=is%3Aissue+label%3A%22pkg%3A%20types%22+is%3Aopen",
+          "type": "issue-tracker"
+        }
+      ],
+      "properties": []
+    },
+    "componentHighestLibdays": {
+      "bom-ref": "@kurkle/color@0.3.4",
+      "type": "library",
+      "author": "Jukka Kurkela",
+      "name": "@kurkle/color",
+      "version": "0.3.4",
+      "description": "css color parsing, manupulation and conversion",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3395249d93c746edc31035a88a953ab04f0f76467a67f4bebf8743f8a7bc21a365a5d4906a1e74973d4ab5c1416b6bec74e9f06db9f127054ce30b72eae740e7"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40kurkle/color@0.3.4",
+      "externalReferences": [
+        {
+          "url": "https://registry.npmjs.org/@kurkle/color/-/color-0.3.4.tgz",
+          "type": "distribution"
+        },
+        {
+          "url": "git+https://github.com/kurkle/color.git",
+          "type": "vcs"
+        },
+        {
+          "url": "https://github.com/kurkle/color#readme",
+          "type": "website"
+        },
+        {
+          "url": "https://github.com/kurkle/color/issues",
+          "type": "issue-tracker"
+        }
+      ],
+      "properties": []
+    }
+  },
+  "directOptional": {
+    "libdays": 101.0109375,
+    "missedReleases": 7,
+    "numComponents": 1,
+    "highestLibdays": 101.0109375,
+    "highestMissedReleases": 7,
+    "componentHighestMissedReleases": {
+      "bom-ref": "vue-tsc@2.2.10",
+      "type": "library",
+      "name": "vue-tsc",
+      "version": "2.2.10",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8d6675c5268d6da6c4577c21a480cc6e355255ac230325bec759f725e190a3b4b4bafda7f45fc9320596f74b4658d1512b26b863028c6600adaf4bd100cec379"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/vue-tsc@2.2.10",
+      "externalReferences": [
+        {
+          "url": "https://registry.npmjs.org/vue-tsc/-/vue-tsc-2.2.10.tgz",
+          "type": "distribution"
+        },
+        {
+          "url": "git+https://github.com/vuejs/language-tools.git",
+          "type": "vcs"
+        },
+        {
+          "url": "https://github.com/vuejs/language-tools#readme",
+          "type": "website"
+        },
+        {
+          "url": "https://github.com/vuejs/language-tools/issues",
+          "type": "issue-tracker"
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ]
+    },
+    "componentHighestLibdays": {
+      "bom-ref": "vue-tsc@2.2.10",
+      "type": "library",
+      "name": "vue-tsc",
+      "version": "2.2.10",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8d6675c5268d6da6c4577c21a480cc6e355255ac230325bec759f725e190a3b4b4bafda7f45fc9320596f74b4658d1512b26b863028c6600adaf4bd100cec379"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/vue-tsc@2.2.10",
+      "externalReferences": [
+        {
+          "url": "https://registry.npmjs.org/vue-tsc/-/vue-tsc-2.2.10.tgz",
+          "type": "distribution"
+        },
+        {
+          "url": "git+https://github.com/vuejs/language-tools.git",
+          "type": "vcs"
+        },
+        {
+          "url": "https://github.com/vuejs/language-tools#readme",
+          "type": "website"
+        },
+        {
+          "url": "https://github.com/vuejs/language-tools/issues",
+          "type": "issue-tracker"
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ]
+    }
+  },
+  "directProduction": {
+    "libdays": 0,
+    "missedReleases": 0,
+    "numComponents": 0,
+    "highestLibdays": 0,
+    "highestMissedReleases": 0,
+    "componentHighestMissedReleases": {
+      "type": "",
+      "name": ""
+    },
+    "componentHighestLibdays": {
+      "type": "",
+      "name": ""
+    }
+  },
+  "timestamp": 1754477446
+}

@@ -1,0 +1,63 @@
+{
+  "optional": {
+    "libdays": 0,
+    "missedReleases": 0,
+    "numComponents": 0,
+    "highestLibdays": 0,
+    "highestMissedReleases": 0,
+    "componentHighestMissedReleases": {
+      "type": "",
+      "name": ""
+    },
+    "componentHighestLibdays": {
+      "type": "",
+      "name": ""
+    }
+  },
+  "production": {
+    "libdays": 0,
+    "missedReleases": 0,
+    "numComponents": 2,
+    "highestLibdays": 0,
+    "highestMissedReleases": 0,
+    "componentHighestMissedReleases": {
+      "type": "",
+      "name": ""
+    },
+    "componentHighestLibdays": {
+      "type": "",
+      "name": ""
+    }
+  },
+  "directOptional": {
+    "libdays": 0,
+    "missedReleases": 0,
+    "numComponents": 0,
+    "highestLibdays": 0,
+    "highestMissedReleases": 0,
+    "componentHighestMissedReleases": {
+      "type": "",
+      "name": ""
+    },
+    "componentHighestLibdays": {
+      "type": "",
+      "name": ""
+    }
+  },
+  "directProduction": {
+    "libdays": 0,
+    "missedReleases": 0,
+    "numComponents": 3,
+    "highestLibdays": 0,
+    "highestMissedReleases": 0,
+    "componentHighestMissedReleases": {
+      "type": "",
+      "name": ""
+    },
+    "componentHighestLibdays": {
+      "type": "",
+      "name": ""
+    }
+  },
+  "timestamp": 1754470265
+}
