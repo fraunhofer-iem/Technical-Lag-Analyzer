@@ -10,7 +10,7 @@ import (
 
 func TestGetDirectDeps(t *testing.T) {
 	// Load the SBOM from examples/sbom.json
-	sbomFile, err := os.ReadFile("../../examples/sbom.json")
+	sbomFile, err := os.ReadFile("../../examples/sbom-npm-vuejs.json")
 	if err != nil {
 		t.Fatalf("Failed to read SBOM file: %v", err)
 	}
