@@ -83,24 +83,45 @@ func insertVersionIfMissing(sortedVersions []*version.Version, usedVersion *vers
 // calculateVersionDistance calculates the distance metrics between versions
 func calculateVersionDistance(sortedVersions []*version.Version, usedIndex int, usedVersion *version.Version) *VersionDistance {
 	missedReleases := len(sortedVersions) - 1 - usedIndex
-	latestVersion := sortedVersions[len(sortedVersions)-1]
+
+	// Count actual missed releases by type
+	var missedMajor, missedMinor, missedPatch int64
 
 	usedSegments := usedVersion.Segments64()
-	latestSegments := latestVersion.Segments64()
-
-	// Ensure we have at least 3 segments (major.minor.patch)
 	if len(usedSegments) < 3 {
 		usedSegments = append(usedSegments, make([]int64, 3-len(usedSegments))...)
 	}
-	if len(latestSegments) < 3 {
-		latestSegments = append(latestSegments, make([]int64, 3-len(latestSegments))...)
+
+	// Count missed releases by examining each version after the used version
+	for i := usedIndex + 1; i < len(sortedVersions); i++ {
+		currentSegments := sortedVersions[i].Segments64()
+		if len(currentSegments) < 3 {
+			currentSegments = append(currentSegments, make([]int64, 3-len(currentSegments))...)
+		}
+
+		prevSegments := usedSegments
+		if i > usedIndex+1 {
+			prevSegments = sortedVersions[i-1].Segments64()
+			if len(prevSegments) < 3 {
+				prevSegments = append(prevSegments, make([]int64, 3-len(prevSegments))...)
+			}
+		}
+
+		// Determine release type based on which segment changed
+		if currentSegments[0] > prevSegments[0] {
+			missedMajor++
+		} else if currentSegments[1] > prevSegments[1] {
+			missedMinor++
+		} else if currentSegments[2] > prevSegments[2] {
+			missedPatch++
+		}
 	}
 
 	return &VersionDistance{
 		MissedReleases: int64(missedReleases),
-		MissedMajor:    latestSegments[0] - usedSegments[0],
-		MissedMinor:    latestSegments[1] - usedSegments[1],
-		MissedPatch:    latestSegments[2] - usedSegments[2],
+		MissedMajor:    missedMajor,
+		MissedMinor:    missedMinor,
+		MissedPatch:    missedPatch,
 	}
 }
 

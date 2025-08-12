@@ -1,6 +1,8 @@
 # Technical Lag
 
 Technical lag is calculated based on the used version of each package and its newest available version.
+It is calculated as "libyears" as defined in [this article](https://ericbouwers.github.io/papers/icse15.pdf) by Joel Cox
+et al. and as the version distance (how many releases are between the used version and the newest available version).
 
 The package information is taken from a CycloneDX Software Bill of Materials (SBOM), the version information
 is queried from [deps.dev](https://deps.dev).
@@ -28,7 +30,8 @@ docker build -t sbom-technical-lag .
 
 ### Working with Files
 
-The Docker container is configured to make file input/output easy. The container's working directory is set to `/data`, which is where you should mount your local directory containing input files and where output files will be written.
+The Docker container is configured to make file input/output easy. The container's working directory is set to `/data`,
+which is where you should mount your local directory containing input files and where output files will be written.
 
 #### Method 1: Using relative paths (recommended)
 
@@ -62,3 +65,7 @@ docker run -v $(pwd):/data sbom-technical-lag -in examples/sbom-go.json
 ```
 
 ## Output
+
+Complete example outputs are available in the [examples](examples) directory.
+Generally, the results are calculated for the whole project and then separated for the different types of package
+scopes (direct, transitive, optional).
