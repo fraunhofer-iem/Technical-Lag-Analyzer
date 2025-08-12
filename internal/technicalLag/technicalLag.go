@@ -72,8 +72,8 @@ type TechLagStats struct {
 	NumComponents                  int           `json:"numComponents"`
 	HighestLibdays                 float64       `json:"highestLibdays"`
 	HighestMissedReleases          int64         `json:"highestMissedReleases"`
-	ComponentHighestMissedReleases cdx.Component `json:"componentHighestMissedReleases,omitempty"`
-	ComponentHighestLibdays        cdx.Component `json:"componentHighestLibdays,omitempty"`
+	ComponentHighestMissedReleases cdx.Component `json:"componentHighestMissedReleases"`
+	ComponentHighestLibdays        cdx.Component `json:"componentHighestLibdays"`
 }
 
 type Result struct {
