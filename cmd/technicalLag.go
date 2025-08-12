@@ -1,136 +1,174 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"flag"
-	"log"
+	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
 	"sbom-technical-lag/internal/technicalLag"
+	"syscall"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
-var in = flag.String("in", "", "Path to SBOM")
-var out = flag.String("out", "", "File to write the SBOM to")
-var logLevel = flag.Int("logLevel", 0, "Can be 0 for INFO, -4 for DEBUG, 4 for WARN, or 8 for ERROR. Defaults to INFO.")
-
-// SetUpLogging sets up the logging for the application based on the log level provided
-// logLevel: int - the log level to set the logger to, defaults to error
-// returns: *slog.Logger - the logger to be used for logging
-// sets the logger as slog.Default
-func SetUpLogging(logLevel int) *slog.Logger {
-
-	var lvl slog.Level
-
-	switch {
-	case logLevel < int(slog.LevelInfo):
-		lvl = slog.LevelDebug
-	case logLevel < int(slog.LevelWarn):
-		lvl = slog.LevelInfo
-	case logLevel < int(slog.LevelError):
-		lvl = slog.LevelWarn
-	default:
-		lvl = slog.LevelError
-	}
-
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		Level: lvl,
-	}))
-
-	slog.SetDefault(logger)
-	return logger
-}
-
-// ValidateInPath validates an input path and sets a current working dir
-// as default value if *p == ""
-// p - path
-func ValidateInPath(p *string) (os.FileInfo, error) {
-
-	// set the default value if needed
-	if *p == "" {
-		dir, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		*p = dir
-	}
-	f, err := os.Stat(*p)
-	if err != nil {
-		return nil, err
-	}
-
-	return f, nil
+// Config holds the application configuration
+type Config struct {
+	InputPath  string
+	OutputPath string
+	LogLevel   int
 }
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	config := parseFlags()
+
+	logger := setupLogging(config.LogLevel)
+	slog.SetDefault(logger)
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 
 	start := time.Now()
-	// get an input path and check for correctness
-	flag.Parse()
+	logger.Info("Starting technical lag calculation", "input", config.InputPath, "output", config.OutputPath)
 
-	logger := SetUpLogging(*logLevel)
-
-	_, err := ValidateInPath(in)
-	if err != nil {
-		log.Fatal(err)
+	if err := validateInputPath(&config.InputPath); err != nil {
+		return fmt.Errorf("invalid input path: %w", err)
 	}
 
-	logger.Info("Starting libyear calculation", "path", *in, "out", *out)
-
-	file, err := os.Open(*in)
-
-	// Decode the BOM
-	bom := new(cdx.BOM)
-	decoder := cdx.NewBOMDecoder(file, cdx.BOMFileFormatJSON)
-	if err = decoder.Decode(bom); err != nil {
-		log.Fatal(err)
+	bom, err := loadSBOM(config.InputPath)
+	if err != nil {
+		return fmt.Errorf("failed to load SBOM: %w", err)
 	}
 
 	if bom.Components == nil {
-		log.Fatal("No components in sbom")
+		return errors.New("no components found in SBOM")
 	}
 
-	cm, err := technicalLag.Calculate(bom)
+	componentMetrics, err := technicalLag.Calculate(ctx, bom)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to calculate technical lag: %w", err)
 	}
 
-	result, err := technicalLag.CreateResult(bom, cm)
+	result, err := technicalLag.CreateResult(bom, componentMetrics)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to create result: %w", err)
 	}
-	logger.Info("Result", "details", result.String())
 
-	// Initialize Result struct to track all statistics
+	logger.Info("Calculation completed", "details", result.String())
 
-	// Store results in a file if the out path is provided
-	if *out != "" {
-		resultFile, err := os.Create(*out)
-		if err != nil {
-			logger.Error("Failed to create output file", "err", err)
-		} else {
-			defer resultFile.Close()
-
-			// Marshal the result to JSON
-			jsonData, err := json.MarshalIndent(result, "", "  ")
-			if err != nil {
-				logger.Error("Failed to marshal result to JSON", "err", err)
-				return
-			}
-
-			// Write JSON data to the file
-			_, err = resultFile.Write(jsonData)
-			if err != nil {
-				logger.Error("Failed to write JSON data to file", "err", err)
-				return
-			}
-
-			logger.Info("Results written to file in JSON format", "path", *out)
+	if config.OutputPath != "" {
+		if err := saveResults(result, config.OutputPath); err != nil {
+			return fmt.Errorf("failed to save results: %w", err)
 		}
+		logger.Info("Results written to file", "path", config.OutputPath)
 	}
 
 	elapsed := time.Since(start)
-	logger.Info("Finished libyear calculation", "time elapsed", elapsed)
+	logger.Info("Technical lag calculation finished", "duration", elapsed)
+
+	return nil
+}
+
+func parseFlags() Config {
+	var config Config
+
+	flag.StringVar(&config.InputPath, "in", "", "Path to SBOM file")
+	flag.StringVar(&config.OutputPath, "out", "", "Output file for results (JSON format)")
+	flag.IntVar(&config.LogLevel, "log-level", 0, "Log level: -4 (DEBUG), 0 (INFO), 4 (WARN), 8 (ERROR)")
+	flag.Parse()
+
+	return config
+}
+
+// setupLogging configures structured logging based on the provided log level
+func setupLogging(logLevel int) *slog.Logger {
+	var level slog.Level
+
+	switch {
+	case logLevel <= int(slog.LevelDebug):
+		level = slog.LevelDebug
+	case logLevel <= int(slog.LevelInfo):
+		level = slog.LevelInfo
+	case logLevel <= int(slog.LevelWarn):
+		level = slog.LevelWarn
+	default:
+		level = slog.LevelError
+	}
+
+	opts := &slog.HandlerOptions{
+		Level: level,
+	}
+
+	handler := slog.NewTextHandler(os.Stderr, opts)
+	return slog.New(handler)
+}
+
+// validateInputPath validates the input path and sets current working directory as default
+func validateInputPath(path *string) error {
+	if *path == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current working directory: %w", err)
+		}
+		*path = cwd
+	}
+
+	if _, err := os.Stat(*path); err != nil {
+		return fmt.Errorf("path does not exist or is not accessible: %w", err)
+	}
+
+	return nil
+}
+
+// loadSBOM loads and decodes a CycloneDX SBOM from the specified file path
+func loadSBOM(filePath string) (*cdx.BOM, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open SBOM file: %w", err)
+	}
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			slog.Default().Warn("Failed to close SBOM file", "error", closeErr)
+		}
+	}()
+
+	bom := new(cdx.BOM)
+	decoder := cdx.NewBOMDecoder(file, cdx.BOMFileFormatJSON)
+	if err := decoder.Decode(bom); err != nil {
+		return nil, fmt.Errorf("failed to decode SBOM: %w", err)
+	}
+
+	return bom, nil
+}
+
+// saveResults saves the technical lag results to a JSON file
+func saveResults(result technicalLag.Result, outputPath string) error {
+	file, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			slog.Default().Warn("Failed to close output file", "error", closeErr)
+		}
+	}()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(result); err != nil {
+		return fmt.Errorf("failed to encode results to JSON: %w", err)
+	}
+
+	return nil
 }
