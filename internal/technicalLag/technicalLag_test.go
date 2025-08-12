@@ -314,7 +314,7 @@ func TestTechLagStatsZeroValues(t *testing.T) {
 
 func TestResultStringFormat(t *testing.T) {
 	result := Result{
-		Prod: TechLagStats{
+		Production: TechLagStats{
 			NumComponents:         2,
 			Libdays:               150.5,
 			MissedReleases:        15,
@@ -325,7 +325,7 @@ func TestResultStringFormat(t *testing.T) {
 			HighestMissedReleases: 10,
 			Components:            make([]ComponentLag, 0),
 		},
-		Opt: TechLagStats{
+		Optional: TechLagStats{
 			NumComponents:         1,
 			Libdays:               50.25,
 			MissedReleases:        6,
@@ -336,7 +336,7 @@ func TestResultStringFormat(t *testing.T) {
 			HighestMissedReleases: 6,
 			Components:            make([]ComponentLag, 0),
 		},
-		DirectProd: TechLagStats{
+		DirectProduction: TechLagStats{
 			NumComponents:         1,
 			Libdays:               75.0,
 			MissedReleases:        4,
@@ -347,7 +347,7 @@ func TestResultStringFormat(t *testing.T) {
 			HighestMissedReleases: 4,
 			Components:            make([]ComponentLag, 0),
 		},
-		DirectOpt: TechLagStats{
+		DirectOptional: TechLagStats{
 			NumComponents:         0,
 			Libdays:               0.0,
 			MissedReleases:        0,
@@ -368,12 +368,12 @@ func TestResultStringFormat(t *testing.T) {
 	}
 
 	// Check for section headers
-	if !contains(output, "--- Overall ---") {
-		t.Error("Expected output to contain '--- Overall ---'")
+	if !contains(output, "=== Technical Lag Analysis ===") {
+		t.Error("Expected output to contain '=== Technical Lag Analysis ==='")
 	}
 
-	if !contains(output, "--- Direct ---") {
-		t.Error("Expected output to contain '--- Direct ---'")
+	if !contains(output, "=== Summary ===") {
+		t.Error("Expected output to contain '=== Summary ==='")
 	}
 
 	// Check for some key values (basic sanity check)
@@ -457,10 +457,10 @@ func TestComponentScopeSeparation(t *testing.T) {
 
 	// Create result manually to test component separation
 	result := Result{
-		Opt:        TechLagStats{Components: make([]ComponentLag, 0)},
-		Prod:       TechLagStats{Components: make([]ComponentLag, 0)},
-		DirectOpt:  TechLagStats{Components: make([]ComponentLag, 0)},
-		DirectProd: TechLagStats{Components: make([]ComponentLag, 0)},
+		Optional:         TechLagStats{Components: make([]ComponentLag, 0)},
+		Production:       TechLagStats{Components: make([]ComponentLag, 0)},
+		DirectOptional:   TechLagStats{Components: make([]ComponentLag, 0)},
+		DirectProduction: TechLagStats{Components: make([]ComponentLag, 0)},
 	}
 
 	// Process all components (both direct and indirect)
@@ -475,9 +475,9 @@ func TestComponentScopeSeparation(t *testing.T) {
 		}
 
 		if k.Scope == "" || k.Scope == "required" {
-			updateTechLagStats(&result.Prod, v, k, componentLag)
+			updateTechLagStats(&result.Production, v, k, componentLag)
 		} else {
-			updateTechLagStats(&result.Opt, v, k, componentLag)
+			updateTechLagStats(&result.Optional, v, k, componentLag)
 		}
 	}
 
@@ -494,19 +494,19 @@ func TestComponentScopeSeparation(t *testing.T) {
 		}
 
 		if dep.Scope == "" || dep.Scope == "required" {
-			updateTechLagStats(&result.DirectProd, tl, dep, componentLag)
+			updateTechLagStats(&result.DirectProduction, tl, dep, componentLag)
 		} else {
-			updateTechLagStats(&result.DirectOpt, tl, dep, componentLag)
+			updateTechLagStats(&result.DirectOptional, tl, dep, componentLag)
 		}
 	}
 
 	// Test Production components
-	if len(result.Prod.Components) != 2 {
-		t.Errorf("Expected 2 production components, got %d", len(result.Prod.Components))
+	if len(result.Production.Components) != 2 {
+		t.Errorf("Expected 2 production components, got %d", len(result.Production.Components))
 	}
 
-	prodNames := make([]string, len(result.Prod.Components))
-	for i, comp := range result.Prod.Components {
+	prodNames := make([]string, len(result.Production.Components))
+	for i, comp := range result.Production.Components {
 		prodNames[i] = comp.Component.Name
 	}
 
@@ -518,12 +518,12 @@ func TestComponentScopeSeparation(t *testing.T) {
 	}
 
 	// Test Optional components
-	if len(result.Opt.Components) != 2 {
-		t.Errorf("Expected 2 optional components, got %d", len(result.Opt.Components))
+	if len(result.Optional.Components) != 2 {
+		t.Errorf("Expected 2 optional components, got %d", len(result.Optional.Components))
 	}
 
-	optNames := make([]string, len(result.Opt.Components))
-	for i, comp := range result.Opt.Components {
+	optNames := make([]string, len(result.Optional.Components))
+	for i, comp := range result.Optional.Components {
 		optNames[i] = comp.Component.Name
 	}
 
@@ -535,35 +535,35 @@ func TestComponentScopeSeparation(t *testing.T) {
 	}
 
 	// Test Direct Production components
-	if len(result.DirectProd.Components) != 1 {
-		t.Errorf("Expected 1 direct production component, got %d", len(result.DirectProd.Components))
+	if len(result.DirectProduction.Components) != 1 {
+		t.Errorf("Expected 1 direct production component, got %d", len(result.DirectProduction.Components))
 	}
 
-	if result.DirectProd.Components[0].Component.Name != "direct-prod" {
-		t.Errorf("Expected direct-prod in direct production, got %s", result.DirectProd.Components[0].Component.Name)
+	if result.DirectProduction.Components[0].Component.Name != "direct-prod" {
+		t.Errorf("Expected direct-prod in direct production, got %s", result.DirectProduction.Components[0].Component.Name)
 	}
 
 	// Test Direct Optional components
-	if len(result.DirectOpt.Components) != 1 {
-		t.Errorf("Expected 1 direct optional component, got %d", len(result.DirectOpt.Components))
+	if len(result.DirectOptional.Components) != 1 {
+		t.Errorf("Expected 1 direct optional component, got %d", len(result.DirectOptional.Components))
 	}
 
-	if result.DirectOpt.Components[0].Component.Name != "direct-opt" {
-		t.Errorf("Expected direct-opt in direct optional, got %s", result.DirectOpt.Components[0].Component.Name)
+	if result.DirectOptional.Components[0].Component.Name != "direct-opt" {
+		t.Errorf("Expected direct-opt in direct optional, got %s", result.DirectOptional.Components[0].Component.Name)
 	}
 
 	// Test that statistics match the number of components
-	if result.Prod.NumComponents != 2 {
-		t.Errorf("Expected Prod.NumComponents to be 2, got %d", result.Prod.NumComponents)
+	if result.Production.NumComponents != 2 {
+		t.Errorf("Expected Production.NumComponents to be 2, got %d", result.Production.NumComponents)
 	}
-	if result.Opt.NumComponents != 2 {
-		t.Errorf("Expected Opt.NumComponents to be 2, got %d", result.Opt.NumComponents)
+	if result.Optional.NumComponents != 2 {
+		t.Errorf("Expected Optional.NumComponents to be 2, got %d", result.Optional.NumComponents)
 	}
-	if result.DirectProd.NumComponents != 1 {
-		t.Errorf("Expected DirectProd.NumComponents to be 1, got %d", result.DirectProd.NumComponents)
+	if result.DirectProduction.NumComponents != 1 {
+		t.Errorf("Expected DirectProduction.NumComponents to be 1, got %d", result.DirectProduction.NumComponents)
 	}
-	if result.DirectOpt.NumComponents != 1 {
-		t.Errorf("Expected DirectOpt.NumComponents to be 1, got %d", result.DirectOpt.NumComponents)
+	if result.DirectOptional.NumComponents != 1 {
+		t.Errorf("Expected DirectOptional.NumComponents to be 1, got %d", result.DirectOptional.NumComponents)
 	}
 }
 
