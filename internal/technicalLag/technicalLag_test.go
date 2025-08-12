@@ -27,7 +27,16 @@ func TestUpdateTechLagStats(t *testing.T) {
 		VersionDistance: versionDistance,
 	}
 
-	updateTechLagStats(stats, technicalLag.Libdays, technicalLag.VersionDistance, component)
+	componentLag := ComponentLag{
+		Component:      component,
+		Libdays:        technicalLag.Libdays,
+		MissedReleases: technicalLag.VersionDistance.MissedReleases,
+		MissedMajor:    technicalLag.VersionDistance.MissedMajor,
+		MissedMinor:    technicalLag.VersionDistance.MissedMinor,
+		MissedPatch:    technicalLag.VersionDistance.MissedPatch,
+	}
+
+	updateTechLagStats(stats, technicalLag, component, componentLag)
 
 	// Test that all values were properly added
 	if stats.Libdays != 100.5 {
@@ -64,6 +73,15 @@ func TestUpdateTechLagStats(t *testing.T) {
 
 	if stats.ComponentHighestMissedReleases.Name != "test-component" {
 		t.Errorf("Expected ComponentHighestMissedReleases name to be 'test-component', got %s", stats.ComponentHighestMissedReleases.Name)
+	}
+
+	// Test that the component was added to the Components slice
+	if len(stats.Components) != 1 {
+		t.Errorf("Expected 1 component in Components slice, got %d", len(stats.Components))
+	}
+
+	if stats.Components[0].Component.Name != "test-component" {
+		t.Errorf("Expected first component name to be 'test-component', got %s", stats.Components[0].Component.Name)
 	}
 }
 
@@ -106,9 +124,28 @@ func TestUpdateTechLagStatsMultipleComponents(t *testing.T) {
 		VersionDistance: versionDistance2,
 	}
 
+	// Create ComponentLag instances
+	componentLag1 := ComponentLag{
+		Component:      component1,
+		Libdays:        technicalLag1.Libdays,
+		MissedReleases: technicalLag1.VersionDistance.MissedReleases,
+		MissedMajor:    technicalLag1.VersionDistance.MissedMajor,
+		MissedMinor:    technicalLag1.VersionDistance.MissedMinor,
+		MissedPatch:    technicalLag1.VersionDistance.MissedPatch,
+	}
+
+	componentLag2 := ComponentLag{
+		Component:      component2,
+		Libdays:        technicalLag2.Libdays,
+		MissedReleases: technicalLag2.VersionDistance.MissedReleases,
+		MissedMajor:    technicalLag2.VersionDistance.MissedMajor,
+		MissedMinor:    technicalLag2.VersionDistance.MissedMinor,
+		MissedPatch:    technicalLag2.VersionDistance.MissedPatch,
+	}
+
 	// Update stats with both components
-	updateTechLagStats(stats, technicalLag1.Libdays, technicalLag1.VersionDistance, component1)
-	updateTechLagStats(stats, technicalLag2.Libdays, technicalLag2.VersionDistance, component2)
+	updateTechLagStats(stats, technicalLag1, component1, componentLag1)
+	updateTechLagStats(stats, technicalLag2, component2, componentLag2)
 
 	// Test accumulated values
 	if stats.Libdays != 125.5 {
@@ -146,6 +183,19 @@ func TestUpdateTechLagStatsMultipleComponents(t *testing.T) {
 
 	if stats.ComponentHighestMissedReleases.Name != "component-2" {
 		t.Errorf("Expected ComponentHighestMissedReleases name to be 'component-2', got %s", stats.ComponentHighestMissedReleases.Name)
+	}
+
+	// Test that both components were added to the Components slice
+	if len(stats.Components) != 2 {
+		t.Errorf("Expected 2 components in Components slice, got %d", len(stats.Components))
+	}
+
+	if stats.Components[0].Component.Name != "component-1" {
+		t.Errorf("Expected first component name to be 'component-1', got %s", stats.Components[0].Component.Name)
+	}
+
+	if stats.Components[1].Component.Name != "component-2" {
+		t.Errorf("Expected second component name to be 'component-2', got %s", stats.Components[1].Component.Name)
 	}
 }
 
@@ -217,7 +267,16 @@ func TestTechLagStatsZeroValues(t *testing.T) {
 		VersionDistance: versionDistance,
 	}
 
-	updateTechLagStats(stats, technicalLag.Libdays, technicalLag.VersionDistance, component)
+	componentLag := ComponentLag{
+		Component:      component,
+		Libdays:        technicalLag.Libdays,
+		MissedReleases: technicalLag.VersionDistance.MissedReleases,
+		MissedMajor:    technicalLag.VersionDistance.MissedMajor,
+		MissedMinor:    technicalLag.VersionDistance.MissedMinor,
+		MissedPatch:    technicalLag.VersionDistance.MissedPatch,
+	}
+
+	updateTechLagStats(stats, technicalLag, component, componentLag)
 
 	if stats.Libdays != 0.0 {
 		t.Errorf("Expected Libdays to be 0.0, got %f", stats.Libdays)
@@ -246,6 +305,11 @@ func TestTechLagStatsZeroValues(t *testing.T) {
 	if stats.HighestMissedReleases != 0 {
 		t.Errorf("Expected HighestMissedReleases to be 0, got %d", stats.HighestMissedReleases)
 	}
+
+	// Test that the component was added to the Components slice
+	if len(stats.Components) != 1 {
+		t.Errorf("Expected 1 component in Components slice, got %d", len(stats.Components))
+	}
 }
 
 func TestResultStringFormat(t *testing.T) {
@@ -259,6 +323,7 @@ func TestResultStringFormat(t *testing.T) {
 			MissedPatch:           7,
 			HighestLibdays:        100.0,
 			HighestMissedReleases: 10,
+			Components:            make([]ComponentLag, 0),
 		},
 		Opt: TechLagStats{
 			NumComponents:         1,
@@ -269,6 +334,7 @@ func TestResultStringFormat(t *testing.T) {
 			MissedPatch:           3,
 			HighestLibdays:        50.25,
 			HighestMissedReleases: 6,
+			Components:            make([]ComponentLag, 0),
 		},
 		DirectProd: TechLagStats{
 			NumComponents:         1,
@@ -279,6 +345,7 @@ func TestResultStringFormat(t *testing.T) {
 			MissedPatch:           1,
 			HighestLibdays:        75.0,
 			HighestMissedReleases: 4,
+			Components:            make([]ComponentLag, 0),
 		},
 		DirectOpt: TechLagStats{
 			NumComponents:         0,
@@ -289,6 +356,7 @@ func TestResultStringFormat(t *testing.T) {
 			MissedPatch:           0,
 			HighestLibdays:        0.0,
 			HighestMissedReleases: 0,
+			Components:            make([]ComponentLag, 0),
 		},
 	}
 
@@ -316,6 +384,197 @@ func TestResultStringFormat(t *testing.T) {
 	if !contains(output, "50.25") { // Opt libdays
 		t.Error("Expected output to contain optional libdays value")
 	}
+}
+
+func TestComponentScopeSeparation(t *testing.T) {
+	// Create mock components with different scopes
+	prodComponent := cdx.Component{
+		Name:    "prod-component",
+		Version: "1.0.0",
+		Scope:   "required",
+	}
+
+	optComponent := cdx.Component{
+		Name:    "opt-component",
+		Version: "2.0.0",
+		Scope:   "optional",
+	}
+
+	directProdComponent := cdx.Component{
+		Name:    "direct-prod",
+		Version: "3.0.0",
+		Scope:   "required",
+	}
+
+	directOptComponent := cdx.Component{
+		Name:    "direct-opt",
+		Version: "4.0.0",
+		Scope:   "optional",
+	}
+
+	// Create component map
+	cm := map[cdx.Component]TechnicalLag{
+		prodComponent: {
+			Libdays: 50.0,
+			VersionDistance: semver.VersionDistance{
+				MissedReleases: 5,
+				MissedMajor:    1,
+				MissedMinor:    2,
+				MissedPatch:    2,
+			},
+		},
+		optComponent: {
+			Libdays: 30.0,
+			VersionDistance: semver.VersionDistance{
+				MissedReleases: 3,
+				MissedMajor:    1,
+				MissedMinor:    1,
+				MissedPatch:    1,
+			},
+		},
+		directProdComponent: {
+			Libdays: 75.0,
+			VersionDistance: semver.VersionDistance{
+				MissedReleases: 7,
+				MissedMajor:    2,
+				MissedMinor:    2,
+				MissedPatch:    3,
+			},
+		},
+		directOptComponent: {
+			Libdays: 25.0,
+			VersionDistance: semver.VersionDistance{
+				MissedReleases: 2,
+				MissedMajor:    0,
+				MissedMinor:    1,
+				MissedPatch:    1,
+			},
+		},
+	}
+
+	// Mock the direct dependencies (simulate that directProdComponent and directOptComponent are direct)
+	directDeps := []cdx.Component{directProdComponent, directOptComponent}
+
+	// Create result manually to test component separation
+	result := Result{
+		Opt:        TechLagStats{Components: make([]ComponentLag, 0)},
+		Prod:       TechLagStats{Components: make([]ComponentLag, 0)},
+		DirectOpt:  TechLagStats{Components: make([]ComponentLag, 0)},
+		DirectProd: TechLagStats{Components: make([]ComponentLag, 0)},
+	}
+
+	// Process all components (both direct and indirect)
+	for k, v := range cm {
+		componentLag := ComponentLag{
+			Component:      k,
+			Libdays:        v.Libdays,
+			MissedReleases: v.VersionDistance.MissedReleases,
+			MissedMajor:    v.VersionDistance.MissedMajor,
+			MissedMinor:    v.VersionDistance.MissedMinor,
+			MissedPatch:    v.VersionDistance.MissedPatch,
+		}
+
+		if k.Scope == "" || k.Scope == "required" {
+			updateTechLagStats(&result.Prod, v, k, componentLag)
+		} else {
+			updateTechLagStats(&result.Opt, v, k, componentLag)
+		}
+	}
+
+	// Process direct dependencies separately
+	for _, dep := range directDeps {
+		tl := cm[dep]
+		componentLag := ComponentLag{
+			Component:      dep,
+			Libdays:        tl.Libdays,
+			MissedReleases: tl.VersionDistance.MissedReleases,
+			MissedMajor:    tl.VersionDistance.MissedMajor,
+			MissedMinor:    tl.VersionDistance.MissedMinor,
+			MissedPatch:    tl.VersionDistance.MissedPatch,
+		}
+
+		if dep.Scope == "" || dep.Scope == "required" {
+			updateTechLagStats(&result.DirectProd, tl, dep, componentLag)
+		} else {
+			updateTechLagStats(&result.DirectOpt, tl, dep, componentLag)
+		}
+	}
+
+	// Test Production components
+	if len(result.Prod.Components) != 2 {
+		t.Errorf("Expected 2 production components, got %d", len(result.Prod.Components))
+	}
+
+	prodNames := make([]string, len(result.Prod.Components))
+	for i, comp := range result.Prod.Components {
+		prodNames[i] = comp.Component.Name
+	}
+
+	if !containsString(prodNames, "prod-component") {
+		t.Error("Expected prod-component in production components")
+	}
+	if !containsString(prodNames, "direct-prod") {
+		t.Error("Expected direct-prod in production components")
+	}
+
+	// Test Optional components
+	if len(result.Opt.Components) != 2 {
+		t.Errorf("Expected 2 optional components, got %d", len(result.Opt.Components))
+	}
+
+	optNames := make([]string, len(result.Opt.Components))
+	for i, comp := range result.Opt.Components {
+		optNames[i] = comp.Component.Name
+	}
+
+	if !containsString(optNames, "opt-component") {
+		t.Error("Expected opt-component in optional components")
+	}
+	if !containsString(optNames, "direct-opt") {
+		t.Error("Expected direct-opt in optional components")
+	}
+
+	// Test Direct Production components
+	if len(result.DirectProd.Components) != 1 {
+		t.Errorf("Expected 1 direct production component, got %d", len(result.DirectProd.Components))
+	}
+
+	if result.DirectProd.Components[0].Component.Name != "direct-prod" {
+		t.Errorf("Expected direct-prod in direct production, got %s", result.DirectProd.Components[0].Component.Name)
+	}
+
+	// Test Direct Optional components
+	if len(result.DirectOpt.Components) != 1 {
+		t.Errorf("Expected 1 direct optional component, got %d", len(result.DirectOpt.Components))
+	}
+
+	if result.DirectOpt.Components[0].Component.Name != "direct-opt" {
+		t.Errorf("Expected direct-opt in direct optional, got %s", result.DirectOpt.Components[0].Component.Name)
+	}
+
+	// Test that statistics match the number of components
+	if result.Prod.NumComponents != 2 {
+		t.Errorf("Expected Prod.NumComponents to be 2, got %d", result.Prod.NumComponents)
+	}
+	if result.Opt.NumComponents != 2 {
+		t.Errorf("Expected Opt.NumComponents to be 2, got %d", result.Opt.NumComponents)
+	}
+	if result.DirectProd.NumComponents != 1 {
+		t.Errorf("Expected DirectProd.NumComponents to be 1, got %d", result.DirectProd.NumComponents)
+	}
+	if result.DirectOpt.NumComponents != 1 {
+		t.Errorf("Expected DirectOpt.NumComponents to be 1, got %d", result.DirectOpt.NumComponents)
+	}
+}
+
+// Helper function to check if a slice contains a string
+func containsString(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
 
 // Helper function to check if a string contains a substring

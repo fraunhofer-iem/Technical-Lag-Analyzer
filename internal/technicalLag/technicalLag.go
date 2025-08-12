@@ -67,16 +67,17 @@ func Calculate(bom *cdx.BOM) (map[cdx.Component]TechnicalLag, error) {
 }
 
 type TechLagStats struct {
-	Libdays                        float64       `json:"libdays"`
-	MissedReleases                 int64         `json:"missedReleases"`
-	MissedMajor                    int64         `json:"missedMajor"`
-	MissedMinor                    int64         `json:"missedMinor"`
-	MissedPatch                    int64         `json:"missedPatch"`
-	NumComponents                  int           `json:"numComponents"`
-	HighestLibdays                 float64       `json:"highestLibdays"`
-	HighestMissedReleases          int64         `json:"highestMissedReleases"`
-	ComponentHighestMissedReleases cdx.Component `json:"componentHighestMissedReleases"`
-	ComponentHighestLibdays        cdx.Component `json:"componentHighestLibdays"`
+	Libdays                        float64        `json:"libdays"`
+	MissedReleases                 int64          `json:"missedReleases"`
+	MissedMajor                    int64          `json:"missedMajor"`
+	MissedMinor                    int64          `json:"missedMinor"`
+	MissedPatch                    int64          `json:"missedPatch"`
+	NumComponents                  int            `json:"numComponents"`
+	HighestLibdays                 float64        `json:"highestLibdays"`
+	HighestMissedReleases          int64          `json:"highestMissedReleases"`
+	ComponentHighestMissedReleases cdx.Component  `json:"componentHighestMissedReleases"`
+	ComponentHighestLibdays        cdx.Component  `json:"componentHighestLibdays"`
+	Components                     []ComponentLag `json:"components"`
 }
 
 type ComponentLag struct {
@@ -89,37 +90,35 @@ type ComponentLag struct {
 }
 
 type Result struct {
-	Opt        TechLagStats   `json:"optional"`
-	Prod       TechLagStats   `json:"production"`
-	DirectOpt  TechLagStats   `json:"directOptional"`
-	DirectProd TechLagStats   `json:"directProduction"`
-	Timestamp  int64          `json:"timestamp"`
-	Components []ComponentLag `json:"components"`
+	Opt        TechLagStats `json:"optional"`
+	Prod       TechLagStats `json:"production"`
+	DirectOpt  TechLagStats `json:"directOptional"`
+	DirectProd TechLagStats `json:"directProduction"`
+	Timestamp  int64        `json:"timestamp"`
 }
 
 func CreateResult(bom *cdx.BOM, cm map[cdx.Component]TechnicalLag) (Result, error) {
 	result := Result{
-		Opt:        TechLagStats{},
-		Prod:       TechLagStats{},
-		DirectOpt:  TechLagStats{},
-		DirectProd: TechLagStats{},
-		Components: make([]ComponentLag, 0, len(cm)),
+		Opt:        TechLagStats{Components: make([]ComponentLag, 0)},
+		Prod:       TechLagStats{Components: make([]ComponentLag, 0)},
+		DirectOpt:  TechLagStats{Components: make([]ComponentLag, 0)},
+		DirectProd: TechLagStats{Components: make([]ComponentLag, 0)},
 	}
 
 	for k, v := range cm {
-		result.Components = append(result.Components, ComponentLag{
+		componentLag := ComponentLag{
 			Component:      k,
 			Libdays:        v.Libdays,
 			MissedReleases: v.VersionDistance.MissedReleases,
 			MissedMajor:    v.VersionDistance.MissedMajor,
 			MissedMinor:    v.VersionDistance.MissedMinor,
 			MissedPatch:    v.VersionDistance.MissedPatch,
-		})
+		}
 
 		if k.Scope == "" || k.Scope == "required" {
-			updateTechLagStats(&result.Prod, v.Libdays, v.VersionDistance, k)
+			updateTechLagStats(&result.Prod, v, k, componentLag)
 		} else {
-			updateTechLagStats(&result.Opt, v.Libdays, v.VersionDistance, k)
+			updateTechLagStats(&result.Opt, v, k, componentLag)
 		}
 	}
 
@@ -130,10 +129,19 @@ func CreateResult(bom *cdx.BOM, cm map[cdx.Component]TechnicalLag) (Result, erro
 
 	for _, dep := range directDeps {
 		tl := cm[dep]
+		componentLag := ComponentLag{
+			Component:      dep,
+			Libdays:        tl.Libdays,
+			MissedReleases: tl.VersionDistance.MissedReleases,
+			MissedMajor:    tl.VersionDistance.MissedMajor,
+			MissedMinor:    tl.VersionDistance.MissedMinor,
+			MissedPatch:    tl.VersionDistance.MissedPatch,
+		}
+
 		if dep.Scope == "" || dep.Scope == "required" {
-			updateTechLagStats(&result.DirectProd, tl.Libdays, tl.VersionDistance, dep)
+			updateTechLagStats(&result.DirectProd, tl, dep, componentLag)
 		} else {
-			updateTechLagStats(&result.DirectOpt, tl.Libdays, tl.VersionDistance, dep)
+			updateTechLagStats(&result.DirectOpt, tl, dep, componentLag)
 		}
 	}
 
@@ -183,19 +191,21 @@ func (r *Result) String() string {
 }
 
 // updateTechLagStats updates the TechLagStats fields with the given technical lag information
-func updateTechLagStats(stats *TechLagStats, libdays float64, versionDistance semver.VersionDistance, c cdx.Component) {
-	stats.Libdays += libdays
-	stats.MissedReleases += versionDistance.MissedReleases
-	stats.MissedMajor += versionDistance.MissedMajor
-	stats.MissedMinor += versionDistance.MissedMinor
-	stats.MissedPatch += versionDistance.MissedPatch
+func updateTechLagStats(stats *TechLagStats, tl TechnicalLag, c cdx.Component, componentLag ComponentLag) {
+	stats.Libdays += tl.Libdays
+	stats.MissedReleases += tl.VersionDistance.MissedReleases
+	stats.MissedMajor += tl.VersionDistance.MissedMajor
+	stats.MissedMinor += tl.VersionDistance.MissedMinor
+	stats.MissedPatch += tl.VersionDistance.MissedPatch
 	stats.NumComponents++
-	if versionDistance.MissedReleases > stats.HighestMissedReleases {
-		stats.HighestMissedReleases = versionDistance.MissedReleases
+	stats.Components = append(stats.Components, componentLag)
+
+	if tl.VersionDistance.MissedReleases > stats.HighestMissedReleases {
+		stats.HighestMissedReleases = tl.VersionDistance.MissedReleases
 		stats.ComponentHighestMissedReleases = c
 	}
-	if libdays > stats.HighestLibdays {
-		stats.HighestLibdays = libdays
+	if tl.Libdays > stats.HighestLibdays {
+		stats.HighestLibdays = tl.Libdays
 		stats.ComponentHighestLibdays = c
 	}
 }
