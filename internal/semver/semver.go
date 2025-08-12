@@ -179,10 +179,7 @@ func calculateVersionDistance(sortedVersions []*version.Version, usedIndex int, 
 			"used_version", usedVersion.String())
 
 		// Adjust patch count to maintain consistency
-		result.MissedPatch = int64(missedReleases) - missedMajor - missedMinor
-		if result.MissedPatch < 0 {
-			result.MissedPatch = 0
-		}
+		result.MissedPatch = max(int64(missedReleases)-missedMajor-missedMinor, 0)
 	}
 
 	return result

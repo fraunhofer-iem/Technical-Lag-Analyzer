@@ -2,6 +2,7 @@ package technicalLag
 
 import (
 	"sbom-technical-lag/internal/semver"
+	"slices"
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -569,12 +570,7 @@ func TestComponentScopeSeparation(t *testing.T) {
 
 // Helper function to check if a slice contains a string
 func containsString(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, item)
 }
 
 // Helper function to check if a string contains a substring
