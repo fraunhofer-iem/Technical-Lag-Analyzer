@@ -285,3 +285,97 @@ func FindComponentsByName(bom *cdx.BOM, name string) ([]cdx.Component, error) {
 
 	return matches, nil
 }
+
+// GetComponentDependencies returns all components that depend on the given component reference
+func GetComponentDependencies(bom *cdx.BOM, componentRef string) ([]cdx.Component, error) {
+	if err := ValidateBOM(bom); err != nil {
+		return nil, fmt.Errorf("invalid BOM: %w", err)
+	}
+
+	if componentRef == "" {
+		return nil, fmt.Errorf("empty component reference provided")
+	}
+
+	dependencies := *bom.Dependencies
+	components := *bom.Components
+
+	// Find all dependencies that depend on the given component
+	var dependentRefs []string
+	for _, dep := range dependencies {
+		if dep.Dependencies != nil {
+			for _, depRef := range *dep.Dependencies {
+				if depRef == componentRef {
+					dependentRefs = append(dependentRefs, dep.Ref)
+					break
+				}
+			}
+		}
+	}
+
+	// Convert references to actual components
+	var dependentComponents []cdx.Component
+	for _, ref := range dependentRefs {
+		for _, comp := range components {
+			if comp.BOMRef == ref {
+				dependentComponents = append(dependentComponents, comp)
+				break
+			}
+		}
+	}
+
+	slog.Default().Debug("Found component dependencies",
+		"component_ref", componentRef,
+		"dependent_count", len(dependentComponents))
+
+	return dependentComponents, nil
+}
+
+// GetDirectDependenciesOf returns the direct dependencies of a specific component
+func GetDirectDependenciesOf(bom *cdx.BOM, componentRef string) ([]cdx.Component, error) {
+	if err := ValidateBOM(bom); err != nil {
+		return nil, fmt.Errorf("invalid BOM: %w", err)
+	}
+
+	if componentRef == "" {
+		return nil, fmt.Errorf("empty component reference provided")
+	}
+
+	dependencies := *bom.Dependencies
+	components := *bom.Components
+
+	// Find the dependency entry for this component
+	var componentDep *cdx.Dependency
+	for i, dep := range dependencies {
+		if dep.Ref == componentRef {
+			componentDep = &dependencies[i]
+			break
+		}
+	}
+
+	if componentDep == nil {
+		slog.Default().Debug("No dependency entry found for component", "ref", componentRef)
+		return []cdx.Component{}, nil
+	}
+
+	if componentDep.Dependencies == nil {
+		slog.Default().Debug("Component has no direct dependencies", "ref", componentRef)
+		return []cdx.Component{}, nil
+	}
+
+	// Convert dependency references to actual components
+	var directDeps []cdx.Component
+	for _, depRef := range *componentDep.Dependencies {
+		for _, comp := range components {
+			if comp.BOMRef == depRef {
+				directDeps = append(directDeps, comp)
+				break
+			}
+		}
+	}
+
+	slog.Default().Debug("Found direct dependencies of component",
+		"component_ref", componentRef,
+		"direct_deps_count", len(directDeps))
+
+	return directDeps, nil
+}

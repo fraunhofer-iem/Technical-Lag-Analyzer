@@ -236,13 +236,12 @@ type ComponentLag struct {
 
 // Result contains comprehensive technical lag analysis results
 type Result struct {
-	Production       TechLagStats    `json:"production"`
-	Optional         TechLagStats    `json:"optional"`
-	DirectProduction TechLagStats    `json:"directProduction"`
-	DirectOptional   TechLagStats    `json:"directOptional"`
-	Timestamp        int64           `json:"timestamp"`
-	Summary          Summary         `json:"summary"`
-	HotPaths         HotPathAnalysis `json:"hotPaths"`
+	Production       TechLagStats `json:"production"`
+	Optional         TechLagStats `json:"optional"`
+	DirectProduction TechLagStats `json:"directProduction"`
+	DirectOptional   TechLagStats `json:"directOptional"`
+	Timestamp        int64        `json:"timestamp"`
+	Summary          Summary      `json:"summary"`
 }
 
 // Summary provides high-level metrics across all categories
@@ -309,9 +308,6 @@ func CreateResult(bom *cdx.BOM, componentMetrics map[cdx.Component]TechnicalLag)
 
 	// Calculate summary
 	result.Summary = calculateSummary(result)
-
-	// Perform hotpath analysis
-	result.HotPaths = CreateHotPathAnalysis(result)
 
 	return result, nil
 }
@@ -400,29 +396,41 @@ func (r *Result) String() string {
 		r.Summary.AvgMissedReleases,
 	)
 
-	// Add hotpath summary
-	output += "\n=== HotPath Analysis ===\n"
-	if r.HotPaths.Summary.MostCriticalScope != "" {
-		output += fmt.Sprintf("Most critical scope: %s (%.1f%% contribution)\n",
-			r.HotPaths.Summary.MostCriticalScope, r.HotPaths.Summary.HighestConcentration)
-	}
-	if r.HotPaths.Summary.MostFragmentedScope != "" {
-		output += fmt.Sprintf("Most fragmented scope: %s\n", r.HotPaths.Summary.MostFragmentedScope)
-	}
-
-	// Add libyears hotpaths summary
-	output += "\nLibyears HotPaths:\n"
-	for _, hotPath := range r.HotPaths.LibyearsHotPaths {
-		output += fmt.Sprintf("  %-20s: %d components cover %.1f%% of total lag\n",
-			hotPath.Scope, hotPath.NumHotPathComponents, hotPath.HotPathCoverage)
-	}
-
-	// Add version distance hotpaths summary
-	output += "\nVersion Distance HotPaths:\n"
-	for _, hotPath := range r.HotPaths.VersionDistanceHotPaths {
-		output += fmt.Sprintf("  %-20s: %d components cover %.1f%% of total lag\n",
-			hotPath.Scope, hotPath.NumHotPathComponents, hotPath.HotPathCoverage)
-	}
-
 	return output
+}
+
+// CalculateCriticalityScore calculates the criticality score for a component
+// criticality_score = Sum(libyears of all direct dependencies) / libyears of whole scope
+func CalculateCriticalityScore(component cdx.Component, bom *cdx.BOM, componentMetrics map[cdx.Component]TechnicalLag, totalScopeLibyears float64) float64 {
+	if totalScopeLibyears == 0 {
+		return 0.0
+	}
+
+	// Get direct dependencies of this component
+	directDeps, err := sbom.GetDirectDependenciesOf(bom, component.BOMRef)
+	if err != nil {
+		slog.Default().Debug("Failed to get direct dependencies for criticality score",
+			"component", component.Name,
+			"error", err)
+		return 0.0
+	}
+
+	// Sum up libyears of all direct dependencies
+	var sumDirectDepsLibyears float64
+	for _, dep := range directDeps {
+		if metrics, exists := componentMetrics[dep]; exists {
+			sumDirectDepsLibyears += metrics.Libdays
+		}
+	}
+
+	criticalityScore := sumDirectDepsLibyears / totalScopeLibyears
+
+	slog.Default().Debug("Calculated criticality score",
+		"component", component.Name,
+		"direct_deps_count", len(directDeps),
+		"sum_direct_deps_libyears", sumDirectDepsLibyears,
+		"total_scope_libyears", totalScopeLibyears,
+		"criticality_score", criticalityScore)
+
+	return criticalityScore
 }
