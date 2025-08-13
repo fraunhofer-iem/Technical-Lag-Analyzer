@@ -216,6 +216,13 @@ type TechLagStats struct {
 	ComponentHighestMissedReleases cdx.Component  `json:"componentHighestMissedReleases"`
 	ComponentHighestLibdays        cdx.Component  `json:"componentHighestLibdays"`
 	Components                     []ComponentLag `json:"components"`
+	// Computed fields for serialization
+	TotalLibdays        float64 `json:"totalLibdays"`
+	TotalMissedReleases int64   `json:"totalMissedReleases"`
+	TotalMissedMajor    int64   `json:"totalMissedMajor"`
+	TotalMissedMinor    int64   `json:"totalMissedMinor"`
+	TotalMissedPatch    int64   `json:"totalMissedPatch"`
+	TotalNumComponents  int     `json:"totalNumComponents"`
 }
 
 // ComponentLag represents technical lag for a single component
@@ -246,49 +253,22 @@ func (cl ComponentLag) MissedPatch() int64 {
 	return cl.TechnicalLag.VersionDistance.MissedPatch
 }
 
-// Computed properties for TechLagStats
-func (stats TechLagStats) Libdays() float64 {
-	var total float64
-	for _, comp := range stats.Components {
-		total += comp.Libdays()
-	}
-	return total
-}
+// computeTotals calculates totals from Components slice
+func (stats *TechLagStats) computeTotals() {
+	stats.TotalLibdays = 0
+	stats.TotalMissedReleases = 0
+	stats.TotalMissedMajor = 0
+	stats.TotalMissedMinor = 0
+	stats.TotalMissedPatch = 0
+	stats.TotalNumComponents = len(stats.Components)
 
-func (stats TechLagStats) MissedReleases() int64 {
-	var total int64
 	for _, comp := range stats.Components {
-		total += comp.MissedReleases()
+		stats.TotalLibdays += comp.Libdays()
+		stats.TotalMissedReleases += comp.MissedReleases()
+		stats.TotalMissedMajor += comp.MissedMajor()
+		stats.TotalMissedMinor += comp.MissedMinor()
+		stats.TotalMissedPatch += comp.MissedPatch()
 	}
-	return total
-}
-
-func (stats TechLagStats) MissedMajor() int64 {
-	var total int64
-	for _, comp := range stats.Components {
-		total += comp.MissedMajor()
-	}
-	return total
-}
-
-func (stats TechLagStats) MissedMinor() int64 {
-	var total int64
-	for _, comp := range stats.Components {
-		total += comp.MissedMinor()
-	}
-	return total
-}
-
-func (stats TechLagStats) MissedPatch() int64 {
-	var total int64
-	for _, comp := range stats.Components {
-		total += comp.MissedPatch()
-	}
-	return total
-}
-
-func (stats TechLagStats) NumComponents() int {
-	return len(stats.Components)
 }
 
 // Result contains comprehensive technical lag analysis results
@@ -302,9 +282,9 @@ type Result struct {
 
 // Summary provides high-level metrics across all categories - computed from Result
 func (r Result) Summary() Summary {
-	totalComponents := r.Production.NumComponents() + r.Optional.NumComponents()
-	totalLibdays := r.Production.Libdays() + r.Optional.Libdays()
-	totalMissedReleases := r.Production.MissedReleases() + r.Optional.MissedReleases()
+	totalComponents := r.Production.TotalNumComponents + r.Optional.TotalNumComponents
+	totalLibdays := r.Production.TotalLibdays + r.Optional.TotalLibdays
+	totalMissedReleases := r.Production.TotalMissedReleases + r.Optional.TotalMissedReleases
 
 	var avgLibdays, avgMissedReleases float64
 	if totalComponents > 0 {
@@ -416,6 +396,12 @@ func CreateResult(bom *cdx.BOM, componentMetrics map[cdx.Component]TechnicalLag)
 		}
 	}
 
+	// Finalize computed totals for serialization
+	result.Production.computeTotals()
+	result.Optional.computeTotals()
+	result.DirectProduction.computeTotals()
+	result.DirectOptional.computeTotals()
+
 	return result, nil
 }
 
@@ -427,6 +413,14 @@ func isProductionScope(scope cdx.Scope) bool {
 // updateTechLagStats updates aggregate statistics with component data
 func updateTechLagStats(stats *TechLagStats, lag TechnicalLag, component cdx.Component, componentLag ComponentLag) {
 	stats.Components = append(stats.Components, componentLag)
+
+	// Update computed totals
+	stats.TotalLibdays += componentLag.Libdays()
+	stats.TotalMissedReleases += componentLag.MissedReleases()
+	stats.TotalMissedMajor += componentLag.MissedMajor()
+	stats.TotalMissedMinor += componentLag.MissedMinor()
+	stats.TotalMissedPatch += componentLag.MissedPatch()
+	stats.TotalNumComponents++
 
 	if lag.VersionDistance.MissedReleases > stats.HighestMissedReleases {
 		stats.HighestMissedReleases = lag.VersionDistance.MissedReleases
@@ -461,12 +455,12 @@ func (r *Result) String() string {
 			"Average missed releases per component: %.2f\n",
 
 		// Main metrics
-		"Components", r.Production.NumComponents(), r.Optional.NumComponents(), r.DirectProduction.NumComponents(), r.DirectOptional.NumComponents(),
-		"Libdays", r.Production.Libdays(), r.Optional.Libdays(), r.DirectProduction.Libdays(), r.DirectOptional.Libdays(),
-		"Missed releases", r.Production.MissedReleases(), r.Optional.MissedReleases(), r.DirectProduction.MissedReleases(), r.DirectOptional.MissedReleases(),
-		"Missed major", r.Production.MissedMajor(), r.Optional.MissedMajor(), r.DirectProduction.MissedMajor(), r.DirectOptional.MissedMajor(),
-		"Missed minor", r.Production.MissedMinor(), r.Optional.MissedMinor(), r.DirectProduction.MissedMinor(), r.DirectOptional.MissedMinor(),
-		"Missed patch", r.Production.MissedPatch(), r.Optional.MissedPatch(), r.DirectProduction.MissedPatch(), r.DirectOptional.MissedPatch(),
+		"Components", r.Production.TotalNumComponents, r.Optional.TotalNumComponents, r.DirectProduction.TotalNumComponents, r.DirectOptional.TotalNumComponents,
+		"Libdays", r.Production.TotalLibdays, r.Optional.TotalLibdays, r.DirectProduction.TotalLibdays, r.DirectOptional.TotalLibdays,
+		"Missed releases", r.Production.TotalMissedReleases, r.Optional.TotalMissedReleases, r.DirectProduction.TotalMissedReleases, r.DirectOptional.TotalMissedReleases,
+		"Missed major", r.Production.TotalMissedMajor, r.Optional.TotalMissedMajor, r.DirectProduction.TotalMissedMajor, r.DirectOptional.TotalMissedMajor,
+		"Missed minor", r.Production.TotalMissedMinor, r.Optional.TotalMissedMinor, r.DirectProduction.TotalMissedMinor, r.DirectOptional.TotalMissedMinor,
+		"Missed patch", r.Production.TotalMissedPatch, r.Optional.TotalMissedPatch, r.DirectProduction.TotalMissedPatch, r.DirectOptional.TotalMissedPatch,
 
 		// Summary
 		r.Summary().TotalComponents,

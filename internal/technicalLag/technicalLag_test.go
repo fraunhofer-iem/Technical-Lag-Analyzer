@@ -37,24 +37,24 @@ func TestUpdateTechLagStats(t *testing.T) {
 	updateTechLagStats(stats, technicalLag, component, componentLag)
 
 	// Test that all values were properly added
-	if stats.Libdays() != 100.5 {
-		t.Errorf("Expected Libdays to be 100.5, got %f", stats.Libdays())
+	if stats.TotalLibdays != 100.5 {
+		t.Errorf("Expected TotalLibdays to be 100.5, got %f", stats.TotalLibdays)
 	}
 
-	if stats.MissedMajor() != 2 {
-		t.Errorf("Expected MissedMajor to be 2, got %d", stats.MissedMajor())
+	if stats.TotalMissedMajor != 2 {
+		t.Errorf("Expected TotalMissedMajor to be 2, got %d", stats.TotalMissedMajor)
 	}
 
-	if stats.MissedMinor() != 3 {
-		t.Errorf("Expected MissedMinor to be 3, got %d", stats.MissedMinor())
+	if stats.TotalMissedMinor != 3 {
+		t.Errorf("Expected TotalMissedMinor to be 3, got %d", stats.TotalMissedMinor)
 	}
 
-	if stats.MissedPatch() != 5 {
-		t.Errorf("Expected MissedPatch to be 5, got %d", stats.MissedPatch())
+	if stats.TotalMissedPatch != 5 {
+		t.Errorf("Expected TotalMissedPatch to be 5, got %d", stats.TotalMissedPatch)
 	}
 
-	if stats.NumComponents() != 1 {
-		t.Errorf("Expected NumComponents to be 1, got %d", stats.NumComponents())
+	if stats.TotalNumComponents != 1 {
+		t.Errorf("Expected TotalNumComponents to be 1, got %d", stats.TotalNumComponents)
 	}
 
 	if stats.HighestLibdays != 100.5 {
@@ -140,24 +140,24 @@ func TestUpdateTechLagStatsMultipleComponents(t *testing.T) {
 	updateTechLagStats(stats, technicalLag2, component2, componentLag2)
 
 	// Test accumulated values
-	if stats.Libdays() != 125.5 {
-		t.Errorf("Expected Libdays to be 125.5, got %f", stats.Libdays())
+	if stats.TotalLibdays != 125.5 {
+		t.Errorf("Expected TotalLibdays to be 125.5, got %f", stats.TotalLibdays)
 	}
 
-	if stats.MissedMajor() != 4 {
-		t.Errorf("Expected MissedMajor to be 4, got %d", stats.MissedMajor())
+	if stats.TotalMissedMajor != 4 {
+		t.Errorf("Expected TotalMissedMajor to be 4, got %d", stats.TotalMissedMajor)
 	}
 
-	if stats.MissedMinor() != 6 {
-		t.Errorf("Expected MissedMinor to be 6, got %d", stats.MissedMinor())
+	if stats.TotalMissedMinor != 6 {
+		t.Errorf("Expected TotalMissedMinor to be 6, got %d", stats.TotalMissedMinor)
 	}
 
-	if stats.MissedPatch() != 10 {
-		t.Errorf("Expected MissedPatch to be 10, got %d", stats.MissedPatch())
+	if stats.TotalMissedPatch != 10 {
+		t.Errorf("Expected TotalMissedPatch to be 10, got %d", stats.TotalMissedPatch)
 	}
 
-	if stats.NumComponents() != 2 {
-		t.Errorf("Expected NumComponents to be 2, got %d", stats.NumComponents())
+	if stats.TotalNumComponents != 2 {
+		t.Errorf("Expected TotalNumComponents to be 2, got %d", stats.TotalNumComponents)
 	}
 
 	// Test that highest values are tracked correctly
@@ -273,24 +273,28 @@ func TestTechLagStatsZeroValues(t *testing.T) {
 	updateTechLagStats(stats, technicalLag, component, componentLag)
 
 	// Test that all values are zero
-	if stats.Libdays() != 0 {
-		t.Errorf("Expected Libdays to be 0, got %f", stats.Libdays())
+	if stats.TotalLibdays != 0 {
+		t.Errorf("Expected TotalLibdays to be 0, got %f", stats.TotalLibdays)
 	}
 
-	if stats.MissedMajor() != 0 {
-		t.Errorf("Expected MissedMajor to be 0, got %d", stats.MissedMajor())
+	if stats.TotalMissedReleases != 0 {
+		t.Errorf("Expected TotalMissedReleases to be 0, got %d", stats.TotalMissedReleases)
 	}
 
-	if stats.MissedMinor() != 0 {
-		t.Errorf("Expected MissedMinor to be 0, got %d", stats.MissedMinor())
+	if stats.TotalMissedMajor != 0 {
+		t.Errorf("Expected TotalMissedMajor to be 0, got %d", stats.TotalMissedMajor)
 	}
 
-	if stats.MissedPatch() != 0 {
-		t.Errorf("Expected MissedPatch to be 0, got %d", stats.MissedPatch())
+	if stats.TotalMissedMinor != 0 {
+		t.Errorf("Expected TotalMissedMinor to be 0, got %d", stats.TotalMissedMinor)
 	}
 
-	if stats.NumComponents() != 1 {
-		t.Errorf("Expected NumComponents to be 1, got %d", stats.NumComponents())
+	if stats.TotalMissedPatch != 0 {
+		t.Errorf("Expected TotalMissedPatch to be 0, got %d", stats.TotalMissedPatch)
+	}
+
+	if stats.TotalNumComponents != 1 {
+		t.Errorf("Expected TotalNumComponents to be 1, got %d", stats.TotalNumComponents)
 	}
 
 	if stats.HighestLibdays != 0.0 {
@@ -361,6 +365,12 @@ func TestResultStringFormat(t *testing.T) {
 		},
 	}
 
+	// Compute totals for the manually created stats
+	result.Production.computeTotals()
+	result.Optional.computeTotals()
+	result.DirectProduction.computeTotals()
+	result.DirectOptional.computeTotals()
+
 	output := result.String()
 
 	// Just verify that the string contains expected sections and some key values
@@ -384,6 +394,67 @@ func TestResultStringFormat(t *testing.T) {
 
 	if !contains(output, "50.25") { // Opt libdays
 		t.Error("Expected output to contain optional libdays value")
+	}
+}
+
+func TestSerializedComputedValues(t *testing.T) {
+	// Create test components with technical lag data
+	prodComp1 := ComponentLag{
+		Component: cdx.Component{Name: "prod1"},
+		TechnicalLag: TechnicalLag{
+			Libdays:         100.25,
+			VersionDistance: semver.VersionDistance{MissedReleases: 10, MissedMajor: 2, MissedMinor: 3, MissedPatch: 5},
+		},
+	}
+	prodComp2 := ComponentLag{
+		Component: cdx.Component{Name: "prod2"},
+		TechnicalLag: TechnicalLag{
+			Libdays:         50.25,
+			VersionDistance: semver.VersionDistance{MissedReleases: 5, MissedMajor: 1, MissedMinor: 2, MissedPatch: 2},
+		},
+	}
+
+	stats := TechLagStats{
+		HighestLibdays:        100.25,
+		HighestMissedReleases: 10,
+		Components:            []ComponentLag{prodComp1, prodComp2},
+	}
+
+	// Compute totals to simulate serialization preparation
+	stats.computeTotals()
+
+	// Verify computed totals are correct
+
+	// Verify expected values
+	expectedLibdays := 150.5            // 100.25 + 50.25
+	expectedMissedReleases := int64(15) // 10 + 5
+	expectedMissedMajor := int64(3)     // 2 + 1
+	expectedMissedMinor := int64(5)     // 3 + 2
+	expectedMissedPatch := int64(7)     // 5 + 2
+	expectedNumComponents := 2
+
+	if stats.TotalLibdays != expectedLibdays {
+		t.Errorf("Expected TotalLibdays %f, got %f", expectedLibdays, stats.TotalLibdays)
+	}
+
+	if stats.TotalMissedReleases != expectedMissedReleases {
+		t.Errorf("Expected TotalMissedReleases %d, got %d", expectedMissedReleases, stats.TotalMissedReleases)
+	}
+
+	if stats.TotalMissedMajor != expectedMissedMajor {
+		t.Errorf("Expected TotalMissedMajor %d, got %d", expectedMissedMajor, stats.TotalMissedMajor)
+	}
+
+	if stats.TotalMissedMinor != expectedMissedMinor {
+		t.Errorf("Expected TotalMissedMinor %d, got %d", expectedMissedMinor, stats.TotalMissedMinor)
+	}
+
+	if stats.TotalMissedPatch != expectedMissedPatch {
+		t.Errorf("Expected TotalMissedPatch %d, got %d", expectedMissedPatch, stats.TotalMissedPatch)
+	}
+
+	if stats.TotalNumComponents != expectedNumComponents {
+		t.Errorf("Expected TotalNumComponents %d, got %d", expectedNumComponents, stats.TotalNumComponents)
 	}
 }
 
@@ -548,17 +619,17 @@ func TestComponentScopeSeparation(t *testing.T) {
 	}
 
 	// Test that statistics match the number of components
-	if result.Production.NumComponents() != 2 {
-		t.Errorf("Expected Production.NumComponents to be 2, got %d", result.Production.NumComponents())
+	if result.Production.TotalNumComponents != 2 {
+		t.Errorf("Expected Production.TotalNumComponents to be 2, got %d", result.Production.TotalNumComponents)
 	}
-	if result.Optional.NumComponents() != 2 {
-		t.Errorf("Expected Optional.NumComponents to be 2, got %d", result.Optional.NumComponents())
+	if result.Optional.TotalNumComponents != 2 {
+		t.Errorf("Expected Optional.TotalNumComponents to be 2, got %d", result.Optional.TotalNumComponents)
 	}
-	if result.DirectProduction.NumComponents() != 1 {
-		t.Errorf("Expected DirectProduction.NumComponents to be 1, got %d", result.DirectProduction.NumComponents())
+	if result.DirectProduction.TotalNumComponents != 1 {
+		t.Errorf("Expected DirectProduction.TotalNumComponents to be 1, got %d", result.DirectProduction.TotalNumComponents)
 	}
-	if result.DirectOptional.NumComponents() != 1 {
-		t.Errorf("Expected DirectOptional.NumComponents to be 1, got %d", result.DirectOptional.NumComponents())
+	if result.DirectOptional.TotalNumComponents != 1 {
+		t.Errorf("Expected DirectOptional.TotalNumComponents to be 1, got %d", result.DirectOptional.TotalNumComponents)
 	}
 }
 
