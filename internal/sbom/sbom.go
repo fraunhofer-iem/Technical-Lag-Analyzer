@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 )
@@ -303,11 +304,8 @@ func GetComponentDependencies(bom *cdx.BOM, componentRef string) ([]cdx.Componen
 	var dependentRefs []string
 	for _, dep := range dependencies {
 		if dep.Dependencies != nil {
-			for _, depRef := range *dep.Dependencies {
-				if depRef == componentRef {
-					dependentRefs = append(dependentRefs, dep.Ref)
-					break
-				}
+			if slices.Contains(*dep.Dependencies, componentRef) {
+				dependentRefs = append(dependentRefs, dep.Ref)
 			}
 		}
 	}
