@@ -73,6 +73,14 @@ func TestUpdateTechLagStats(t *testing.T) {
 		t.Errorf("Expected ComponentHighestMissedReleases name to be 'test-component', got %s", stats.ComponentHighestMissedReleases.Name)
 	}
 
+	if stats.HighestCriticalityScore != 0.5 {
+		t.Errorf("Expected HighestCriticalityScore to be 0.5, got %f", stats.HighestCriticalityScore)
+	}
+
+	if stats.ComponentHighestCriticalityScore.Name != "test-component" {
+		t.Errorf("Expected ComponentHighestCriticalityScore name to be 'test-component', got %s", stats.ComponentHighestCriticalityScore.Name)
+	}
+
 	// Test that the component was added to the Components slice
 	if len(stats.Components) != 1 {
 		t.Errorf("Expected 1 component in Components slice, got %d", len(stats.Components))
@@ -175,6 +183,14 @@ func TestUpdateTechLagStatsMultipleComponents(t *testing.T) {
 
 	if stats.ComponentHighestMissedReleases.Name != "component-2" {
 		t.Errorf("Expected ComponentHighestMissedReleases name to be 'component-2', got %s", stats.ComponentHighestMissedReleases.Name)
+	}
+
+	if stats.HighestCriticalityScore != 0.7 {
+		t.Errorf("Expected HighestCriticalityScore to be 0.7, got %f", stats.HighestCriticalityScore)
+	}
+
+	if stats.ComponentHighestCriticalityScore.Name != "component-2" {
+		t.Errorf("Expected ComponentHighestCriticalityScore name to be 'component-2', got %s", stats.ComponentHighestCriticalityScore.Name)
 	}
 
 	// Test that both components were added to the Components slice
@@ -303,6 +319,14 @@ func TestTechLagStatsZeroValues(t *testing.T) {
 
 	if stats.HighestMissedReleases != 0 {
 		t.Errorf("Expected HighestMissedReleases to be 0, got %d", stats.HighestMissedReleases)
+	}
+
+	if stats.HighestCriticalityScore != 0.0 {
+		t.Errorf("Expected HighestCriticalityScore to be 0.0, got %f", stats.HighestCriticalityScore)
+	}
+
+	if stats.ComponentHighestCriticalityScore.Name != "" {
+		t.Errorf("Expected ComponentHighestCriticalityScore name to be empty, got %s", stats.ComponentHighestCriticalityScore.Name)
 	}
 
 	// Test that the component was added to the Components slice
@@ -698,5 +722,103 @@ func TestCriticalityScoreCalculation(t *testing.T) {
 			t.Errorf("Expected CriticalityScore to be >= 0, got %f for component %s",
 				comp.CriticalityScore, comp.Component.Name)
 		}
+	}
+}
+
+// TestHighestCriticalityScoreTracking tests that the highest criticality score is properly tracked
+func TestHighestCriticalityScoreTracking(t *testing.T) {
+	stats := &TechLagStats{}
+
+	// Component with lower criticality score
+	component1 := cdx.Component{
+		Name:    "low-criticality",
+		Version: "1.0.0",
+	}
+
+	technicalLag1 := TechnicalLag{
+		Libdays: 25.0,
+		VersionDistance: semver.VersionDistance{
+			MissedReleases: 3,
+		},
+	}
+
+	componentLag1 := ComponentLag{
+		Component:        component1,
+		TechnicalLag:     technicalLag1,
+		CriticalityScore: 0.2,
+	}
+
+	// Component with higher criticality score
+	component2 := cdx.Component{
+		Name:    "high-criticality",
+		Version: "2.0.0",
+	}
+
+	technicalLag2 := TechnicalLag{
+		Libdays: 50.0,
+		VersionDistance: semver.VersionDistance{
+			MissedReleases: 7,
+		},
+	}
+
+	componentLag2 := ComponentLag{
+		Component:        component2,
+		TechnicalLag:     technicalLag2,
+		CriticalityScore: 0.8,
+	}
+
+	// Component with medium criticality score
+	component3 := cdx.Component{
+		Name:    "medium-criticality",
+		Version: "3.0.0",
+	}
+
+	technicalLag3 := TechnicalLag{
+		Libdays: 30.0,
+		VersionDistance: semver.VersionDistance{
+			MissedReleases: 5,
+		},
+	}
+
+	componentLag3 := ComponentLag{
+		Component:        component3,
+		TechnicalLag:     technicalLag3,
+		CriticalityScore: 0.5,
+	}
+
+	// Update stats with all components
+	updateTechLagStats(stats, technicalLag1, component1, componentLag1)
+	updateTechLagStats(stats, technicalLag2, component2, componentLag2)
+	updateTechLagStats(stats, technicalLag3, component3, componentLag3)
+
+	// Test that highest criticality score is tracked correctly
+	if stats.HighestCriticalityScore != 0.8 {
+		t.Errorf("Expected HighestCriticalityScore to be 0.8, got %f", stats.HighestCriticalityScore)
+	}
+
+	if stats.ComponentHighestCriticalityScore.Name != "high-criticality" {
+		t.Errorf("Expected ComponentHighestCriticalityScore name to be 'high-criticality', got %s", stats.ComponentHighestCriticalityScore.Name)
+	}
+
+	// Verify other highest values for comparison
+	if stats.HighestLibdays != 50.0 {
+		t.Errorf("Expected HighestLibdays to be 50.0, got %f", stats.HighestLibdays)
+	}
+
+	if stats.ComponentHighestLibdays.Name != "high-criticality" {
+		t.Errorf("Expected ComponentHighestLibdays name to be 'high-criticality', got %s", stats.ComponentHighestLibdays.Name)
+	}
+
+	if stats.HighestMissedReleases != 7 {
+		t.Errorf("Expected HighestMissedReleases to be 7, got %d", stats.HighestMissedReleases)
+	}
+
+	if stats.ComponentHighestMissedReleases.Name != "high-criticality" {
+		t.Errorf("Expected ComponentHighestMissedReleases name to be 'high-criticality', got %s", stats.ComponentHighestMissedReleases.Name)
+	}
+
+	// Test that all components were added
+	if len(stats.Components) != 3 {
+		t.Errorf("Expected 3 components in Components slice, got %d", len(stats.Components))
 	}
 }

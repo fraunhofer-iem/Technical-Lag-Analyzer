@@ -211,11 +211,13 @@ func Calculate(ctx context.Context, bom *cdx.BOM) (map[cdx.Component]TechnicalLa
 
 // TechLagStats aggregates technical lag statistics
 type TechLagStats struct {
-	HighestLibdays                 float64        `json:"highestLibdays"`
-	HighestMissedReleases          int64          `json:"highestMissedReleases"`
-	ComponentHighestMissedReleases cdx.Component  `json:"componentHighestMissedReleases"`
-	ComponentHighestLibdays        cdx.Component  `json:"componentHighestLibdays"`
-	Components                     []ComponentLag `json:"components"`
+	HighestLibdays                   float64        `json:"highestLibdays"`
+	HighestMissedReleases            int64          `json:"highestMissedReleases"`
+	HighestCriticalityScore          float64        `json:"highestCriticalityScore"`
+	ComponentHighestMissedReleases   cdx.Component  `json:"componentHighestMissedReleases"`
+	ComponentHighestLibdays          cdx.Component  `json:"componentHighestLibdays"`
+	ComponentHighestCriticalityScore cdx.Component  `json:"componentHighestCriticalityScore"`
+	Components                       []ComponentLag `json:"components"`
 	// Computed fields for serialization
 	TotalLibdays        float64 `json:"totalLibdays"`
 	TotalMissedReleases int64   `json:"totalMissedReleases"`
@@ -429,6 +431,10 @@ func updateTechLagStats(stats *TechLagStats, lag TechnicalLag, component cdx.Com
 	if lag.Libdays > stats.HighestLibdays {
 		stats.HighestLibdays = lag.Libdays
 		stats.ComponentHighestLibdays = component
+	}
+	if componentLag.CriticalityScore > stats.HighestCriticalityScore {
+		stats.HighestCriticalityScore = componentLag.CriticalityScore
+		stats.ComponentHighestCriticalityScore = component
 	}
 }
 
