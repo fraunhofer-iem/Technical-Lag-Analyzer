@@ -211,12 +211,6 @@ func Calculate(ctx context.Context, bom *cdx.BOM) (map[cdx.Component]TechnicalLa
 
 // TechLagStats aggregates technical lag statistics
 type TechLagStats struct {
-	Libdays                        float64        `json:"libdays"`
-	MissedReleases                 int64          `json:"missedReleases"`
-	MissedMajor                    int64          `json:"missedMajor"`
-	MissedMinor                    int64          `json:"missedMinor"`
-	MissedPatch                    int64          `json:"missedPatch"`
-	NumComponents                  int            `json:"numComponents"`
 	HighestLibdays                 float64        `json:"highestLibdays"`
 	HighestMissedReleases          int64          `json:"highestMissedReleases"`
 	ComponentHighestMissedReleases cdx.Component  `json:"componentHighestMissedReleases"`
@@ -226,12 +220,75 @@ type TechLagStats struct {
 
 // ComponentLag represents technical lag for a single component
 type ComponentLag struct {
-	Component      cdx.Component `json:"component"`
-	Libdays        float64       `json:"libdays"`
-	MissedReleases int64         `json:"missedReleases"`
-	MissedMajor    int64         `json:"missedMajor"`
-	MissedMinor    int64         `json:"missedMinor"`
-	MissedPatch    int64         `json:"missedPatch"`
+	Component        cdx.Component `json:"component"`
+	TechnicalLag     TechnicalLag  `json:"technicalLag"`
+	CriticalityScore float64       `json:"criticalityScore"`
+}
+
+// Convenience getters for ComponentLag to maintain compatibility
+func (cl ComponentLag) Libdays() float64 {
+	return cl.TechnicalLag.Libdays
+}
+
+func (cl ComponentLag) MissedReleases() int64 {
+	return cl.TechnicalLag.VersionDistance.MissedReleases
+}
+
+func (cl ComponentLag) MissedMajor() int64 {
+	return cl.TechnicalLag.VersionDistance.MissedMajor
+}
+
+func (cl ComponentLag) MissedMinor() int64 {
+	return cl.TechnicalLag.VersionDistance.MissedMinor
+}
+
+func (cl ComponentLag) MissedPatch() int64 {
+	return cl.TechnicalLag.VersionDistance.MissedPatch
+}
+
+// Computed properties for TechLagStats
+func (stats TechLagStats) Libdays() float64 {
+	var total float64
+	for _, comp := range stats.Components {
+		total += comp.Libdays()
+	}
+	return total
+}
+
+func (stats TechLagStats) MissedReleases() int64 {
+	var total int64
+	for _, comp := range stats.Components {
+		total += comp.MissedReleases()
+	}
+	return total
+}
+
+func (stats TechLagStats) MissedMajor() int64 {
+	var total int64
+	for _, comp := range stats.Components {
+		total += comp.MissedMajor()
+	}
+	return total
+}
+
+func (stats TechLagStats) MissedMinor() int64 {
+	var total int64
+	for _, comp := range stats.Components {
+		total += comp.MissedMinor()
+	}
+	return total
+}
+
+func (stats TechLagStats) MissedPatch() int64 {
+	var total int64
+	for _, comp := range stats.Components {
+		total += comp.MissedPatch()
+	}
+	return total
+}
+
+func (stats TechLagStats) NumComponents() int {
+	return len(stats.Components)
 }
 
 // Result contains comprehensive technical lag analysis results
@@ -241,10 +298,29 @@ type Result struct {
 	DirectProduction TechLagStats `json:"directProduction"`
 	DirectOptional   TechLagStats `json:"directOptional"`
 	Timestamp        int64        `json:"timestamp"`
-	Summary          Summary      `json:"summary"`
 }
 
-// Summary provides high-level metrics across all categories
+// Summary provides high-level metrics across all categories - computed from Result
+func (r Result) Summary() Summary {
+	totalComponents := r.Production.NumComponents() + r.Optional.NumComponents()
+	totalLibdays := r.Production.Libdays() + r.Optional.Libdays()
+	totalMissedReleases := r.Production.MissedReleases() + r.Optional.MissedReleases()
+
+	var avgLibdays, avgMissedReleases float64
+	if totalComponents > 0 {
+		avgLibdays = totalLibdays / float64(totalComponents)
+		avgMissedReleases = float64(totalMissedReleases) / float64(totalComponents)
+	}
+
+	return Summary{
+		TotalComponents:    totalComponents,
+		TotalLibdays:       totalLibdays,
+		TotalMissedRelease: totalMissedReleases,
+		AvgLibdays:         avgLibdays,
+		AvgMissedReleases:  avgMissedReleases,
+	}
+}
+
 type Summary struct {
 	TotalComponents    int     `json:"totalComponents"`
 	TotalLibdays       float64 `json:"totalLibdays"`
@@ -263,15 +339,31 @@ func CreateResult(bom *cdx.BOM, componentMetrics map[cdx.Component]TechnicalLag)
 		Timestamp:        time.Now().Unix(),
 	}
 
+	// Calculate total scope libyears for criticality scores
+	var totalProductionLibyears, totalOptionalLibyears float64
+	for component, lag := range componentMetrics {
+		if isProductionScope(component.Scope) {
+			totalProductionLibyears += lag.Libdays
+		} else {
+			totalOptionalLibyears += lag.Libdays
+		}
+	}
+
 	// Process all components
 	for component, lag := range componentMetrics {
+		var totalScopeLibyears float64
+		if isProductionScope(component.Scope) {
+			totalScopeLibyears = totalProductionLibyears
+		} else {
+			totalScopeLibyears = totalOptionalLibyears
+		}
+
+		criticalityScore := CalculateCriticalityScore(component, bom, componentMetrics, totalScopeLibyears)
+
 		componentLag := ComponentLag{
-			Component:      component,
-			Libdays:        lag.Libdays,
-			MissedReleases: lag.VersionDistance.MissedReleases,
-			MissedMajor:    lag.VersionDistance.MissedMajor,
-			MissedMinor:    lag.VersionDistance.MissedMinor,
-			MissedPatch:    lag.VersionDistance.MissedPatch,
+			Component:        component,
+			TechnicalLag:     lag,
+			CriticalityScore: criticalityScore,
 		}
 
 		if isProductionScope(component.Scope) {
@@ -281,20 +373,38 @@ func CreateResult(bom *cdx.BOM, componentMetrics map[cdx.Component]TechnicalLag)
 		}
 	}
 
-	// Process direct dependencies
+	// Calculate total direct scope libyears for criticality scores
+	var totalDirectProductionLibyears, totalDirectOptionalLibyears float64
 	directDeps, err := sbom.GetDirectDeps(bom)
 	if err != nil {
 		slog.Default().Warn("Failed to get direct dependencies", "error", err)
 	} else {
 		for _, dep := range directDeps {
 			if lag, exists := componentMetrics[dep]; exists {
+				if isProductionScope(dep.Scope) {
+					totalDirectProductionLibyears += lag.Libdays
+				} else {
+					totalDirectOptionalLibyears += lag.Libdays
+				}
+			}
+		}
+
+		// Process direct dependencies
+		for _, dep := range directDeps {
+			if lag, exists := componentMetrics[dep]; exists {
+				var totalScopeLibyears float64
+				if isProductionScope(dep.Scope) {
+					totalScopeLibyears = totalDirectProductionLibyears
+				} else {
+					totalScopeLibyears = totalDirectOptionalLibyears
+				}
+
+				criticalityScore := CalculateCriticalityScore(dep, bom, componentMetrics, totalScopeLibyears)
+
 				componentLag := ComponentLag{
-					Component:      dep,
-					Libdays:        lag.Libdays,
-					MissedReleases: lag.VersionDistance.MissedReleases,
-					MissedMajor:    lag.VersionDistance.MissedMajor,
-					MissedMinor:    lag.VersionDistance.MissedMinor,
-					MissedPatch:    lag.VersionDistance.MissedPatch,
+					Component:        dep,
+					TechnicalLag:     lag,
+					CriticalityScore: criticalityScore,
 				}
 
 				if isProductionScope(dep.Scope) {
@@ -306,9 +416,6 @@ func CreateResult(bom *cdx.BOM, componentMetrics map[cdx.Component]TechnicalLag)
 		}
 	}
 
-	// Calculate summary
-	result.Summary = calculateSummary(result)
-
 	return result, nil
 }
 
@@ -319,12 +426,6 @@ func isProductionScope(scope cdx.Scope) bool {
 
 // updateTechLagStats updates aggregate statistics with component data
 func updateTechLagStats(stats *TechLagStats, lag TechnicalLag, component cdx.Component, componentLag ComponentLag) {
-	stats.Libdays += lag.Libdays
-	stats.MissedReleases += lag.VersionDistance.MissedReleases
-	stats.MissedMajor += lag.VersionDistance.MissedMajor
-	stats.MissedMinor += lag.VersionDistance.MissedMinor
-	stats.MissedPatch += lag.VersionDistance.MissedPatch
-	stats.NumComponents++
 	stats.Components = append(stats.Components, componentLag)
 
 	if lag.VersionDistance.MissedReleases > stats.HighestMissedReleases {
@@ -334,27 +435,6 @@ func updateTechLagStats(stats *TechLagStats, lag TechnicalLag, component cdx.Com
 	if lag.Libdays > stats.HighestLibdays {
 		stats.HighestLibdays = lag.Libdays
 		stats.ComponentHighestLibdays = component
-	}
-}
-
-// calculateSummary computes summary statistics across all categories
-func calculateSummary(result Result) Summary {
-	totalComponents := result.Production.NumComponents + result.Optional.NumComponents
-	totalLibdays := result.Production.Libdays + result.Optional.Libdays
-	totalMissedReleases := result.Production.MissedReleases + result.Optional.MissedReleases
-
-	var avgLibdays, avgMissedReleases float64
-	if totalComponents > 0 {
-		avgLibdays = totalLibdays / float64(totalComponents)
-		avgMissedReleases = float64(totalMissedReleases) / float64(totalComponents)
-	}
-
-	return Summary{
-		TotalComponents:    totalComponents,
-		TotalLibdays:       totalLibdays,
-		TotalMissedRelease: totalMissedReleases,
-		AvgLibdays:         avgLibdays,
-		AvgMissedReleases:  avgMissedReleases,
 	}
 }
 
@@ -381,19 +461,19 @@ func (r *Result) String() string {
 			"Average missed releases per component: %.2f\n",
 
 		// Main metrics
-		"Components", r.Production.NumComponents, r.Optional.NumComponents, r.DirectProduction.NumComponents, r.DirectOptional.NumComponents,
-		"Libdays", r.Production.Libdays, r.Optional.Libdays, r.DirectProduction.Libdays, r.DirectOptional.Libdays,
-		"Missed releases", r.Production.MissedReleases, r.Optional.MissedReleases, r.DirectProduction.MissedReleases, r.DirectOptional.MissedReleases,
-		"Missed major", r.Production.MissedMajor, r.Optional.MissedMajor, r.DirectProduction.MissedMajor, r.DirectOptional.MissedMajor,
-		"Missed minor", r.Production.MissedMinor, r.Optional.MissedMinor, r.DirectProduction.MissedMinor, r.DirectOptional.MissedMinor,
-		"Missed patch", r.Production.MissedPatch, r.Optional.MissedPatch, r.DirectProduction.MissedPatch, r.DirectOptional.MissedPatch,
+		"Components", r.Production.NumComponents(), r.Optional.NumComponents(), r.DirectProduction.NumComponents(), r.DirectOptional.NumComponents(),
+		"Libdays", r.Production.Libdays(), r.Optional.Libdays(), r.DirectProduction.Libdays(), r.DirectOptional.Libdays(),
+		"Missed releases", r.Production.MissedReleases(), r.Optional.MissedReleases(), r.DirectProduction.MissedReleases(), r.DirectOptional.MissedReleases(),
+		"Missed major", r.Production.MissedMajor(), r.Optional.MissedMajor(), r.DirectProduction.MissedMajor(), r.DirectOptional.MissedMajor(),
+		"Missed minor", r.Production.MissedMinor(), r.Optional.MissedMinor(), r.DirectProduction.MissedMinor(), r.DirectOptional.MissedMinor(),
+		"Missed patch", r.Production.MissedPatch(), r.Optional.MissedPatch(), r.DirectProduction.MissedPatch(), r.DirectOptional.MissedPatch(),
 
 		// Summary
-		r.Summary.TotalComponents,
-		r.Summary.TotalLibdays,
-		r.Summary.TotalMissedRelease,
-		r.Summary.AvgLibdays,
-		r.Summary.AvgMissedReleases,
+		r.Summary().TotalComponents,
+		r.Summary().TotalLibdays,
+		r.Summary().TotalMissedRelease,
+		r.Summary().AvgLibdays,
+		r.Summary().AvgMissedReleases,
 	)
 
 	return output
