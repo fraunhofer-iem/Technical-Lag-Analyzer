@@ -54,7 +54,8 @@ func TestUpdateTechLagStats(t *testing.T) {
 	}
 
 	mockBOM := createMockBOM()
-	updateTechLagStats(stats, technicalLag, component, componentLag, mockBOM)
+	componentMetrics := map[cdx.Component]TechnicalLag{component: technicalLag}
+	updateTechLagStats(stats, technicalLag, component, componentLag, mockBOM, componentMetrics)
 
 	// Test that all values were properly added
 	if stats.TotalLibdays != 100.5 {
@@ -165,8 +166,12 @@ func TestUpdateTechLagStatsMultipleComponents(t *testing.T) {
 
 	// Update stats with both components
 	mockBOM := createMockBOM()
-	updateTechLagStats(stats, technicalLag1, component1, componentLag1, mockBOM)
-	updateTechLagStats(stats, technicalLag2, component2, componentLag2, mockBOM)
+	componentMetrics := map[cdx.Component]TechnicalLag{
+		component1: technicalLag1,
+		component2: technicalLag2,
+	}
+	updateTechLagStats(stats, technicalLag1, component1, componentLag1, mockBOM, componentMetrics)
+	updateTechLagStats(stats, technicalLag2, component2, componentLag2, mockBOM, componentMetrics)
 
 	// Test accumulated values
 	if stats.TotalLibdays != 125.5 {
@@ -308,7 +313,8 @@ func TestTechLagStatsZeroValues(t *testing.T) {
 	}
 
 	mockBOM := createMockBOM()
-	updateTechLagStats(stats, technicalLag, component, componentLag, mockBOM)
+	componentMetrics := map[cdx.Component]TechnicalLag{component: technicalLag}
+	updateTechLagStats(stats, technicalLag, component, componentLag, mockBOM, componentMetrics)
 
 	// Test that all values are zero
 	if stats.TotalLibdays != 0 {
@@ -589,10 +595,11 @@ func TestComponentScopeSeparation(t *testing.T) {
 			CriticalityScore: 0.1,
 		}
 
+		componentMetrics := map[cdx.Component]TechnicalLag{k: v}
 		if k.Scope == "" || k.Scope == "required" {
-			updateTechLagStats(&result.Production, v, k, componentLag, createMockBOM())
+			updateTechLagStats(&result.Production, v, k, componentLag, createMockBOM(), componentMetrics)
 		} else {
-			updateTechLagStats(&result.Optional, v, k, componentLag, createMockBOM())
+			updateTechLagStats(&result.Optional, v, k, componentLag, createMockBOM(), componentMetrics)
 		}
 	}
 
@@ -605,10 +612,11 @@ func TestComponentScopeSeparation(t *testing.T) {
 			CriticalityScore: 0.2,
 		}
 
+		componentMetrics := map[cdx.Component]TechnicalLag{dep: tl}
 		if dep.Scope == "" || dep.Scope == "required" {
-			updateTechLagStats(&result.DirectProduction, tl, dep, componentLag, createMockBOM())
+			updateTechLagStats(&result.DirectProduction, tl, dep, componentLag, createMockBOM(), componentMetrics)
 		} else {
-			updateTechLagStats(&result.DirectOptional, tl, dep, componentLag, createMockBOM())
+			updateTechLagStats(&result.DirectOptional, tl, dep, componentLag, createMockBOM(), componentMetrics)
 		}
 	}
 
@@ -810,9 +818,14 @@ func TestHighestCriticalityScoreTracking(t *testing.T) {
 
 	// Update stats with all components
 	mockBOM := createMockBOM()
-	updateTechLagStats(stats, technicalLag1, component1, componentLag1, mockBOM)
-	updateTechLagStats(stats, technicalLag2, component2, componentLag2, mockBOM)
-	updateTechLagStats(stats, technicalLag3, component3, componentLag3, mockBOM)
+	componentMetrics := map[cdx.Component]TechnicalLag{
+		component1: technicalLag1,
+		component2: technicalLag2,
+		component3: technicalLag3,
+	}
+	updateTechLagStats(stats, technicalLag1, component1, componentLag1, mockBOM, componentMetrics)
+	updateTechLagStats(stats, technicalLag2, component2, componentLag2, mockBOM, componentMetrics)
+	updateTechLagStats(stats, technicalLag3, component3, componentLag3, mockBOM, componentMetrics)
 
 	// Test that highest criticality score is tracked correctly
 	if stats.HighestCriticalityScore != 0.8 {
@@ -917,7 +930,12 @@ func TestDependencyPathTracking(t *testing.T) {
 	}
 
 	// Update stats with the target component
-	updateTechLagStats(stats, technicalLag, target, componentLag, mockBOM)
+	componentMetrics := map[cdx.Component]TechnicalLag{
+		directDep:    {Libdays: 10.0},
+		intermediate: {Libdays: 20.0},
+		target:       technicalLag,
+	}
+	updateTechLagStats(stats, technicalLag, target, componentLag, mockBOM, componentMetrics)
 
 	// Verify that the highest criticality component is set correctly
 	if stats.ComponentHighestCriticalityScore.Name != "target" {
@@ -937,22 +955,22 @@ func TestDependencyPathTracking(t *testing.T) {
 	// Verify the path order: first element should be direct dependency, last should be target
 	if len(stats.ComponentHighestCriticalityScorePath) >= 1 {
 		firstComponent := stats.ComponentHighestCriticalityScorePath[0]
-		if firstComponent.Name != "direct-dep" {
-			t.Errorf("Expected first component in path to be 'direct-dep', got %s", firstComponent.Name)
+		if firstComponent.Component.Name != "direct-dep" {
+			t.Errorf("Expected first component in path to be 'direct-dep', got %s", firstComponent.Component.Name)
 		}
 	}
 
 	if len(stats.ComponentHighestCriticalityScorePath) >= 2 {
 		secondComponent := stats.ComponentHighestCriticalityScorePath[1]
-		if secondComponent.Name != "intermediate" {
-			t.Errorf("Expected second component in path to be 'intermediate', got %s", secondComponent.Name)
+		if secondComponent.Component.Name != "intermediate" {
+			t.Errorf("Expected second component in path to be 'intermediate', got %s", secondComponent.Component.Name)
 		}
 	}
 
 	if len(stats.ComponentHighestCriticalityScorePath) >= 3 {
 		lastComponent := stats.ComponentHighestCriticalityScorePath[2]
-		if lastComponent.Name != "target" {
-			t.Errorf("Expected last component in path to be 'target', got %s", lastComponent.Name)
+		if lastComponent.Component.Name != "target" {
+			t.Errorf("Expected last component in path to be 'target', got %s", lastComponent.Component.Name)
 		}
 	}
 }
@@ -1004,7 +1022,8 @@ func TestDependencyPathTrackingDirectDependency(t *testing.T) {
 		CriticalityScore: 0.8,
 	}
 
-	updateTechLagStats(stats, technicalLag, directDep, componentLag, mockBOM)
+	componentMetrics := map[cdx.Component]TechnicalLag{directDep: technicalLag}
+	updateTechLagStats(stats, technicalLag, directDep, componentLag, mockBOM, componentMetrics)
 
 	// Verify that the dependency path for a direct dependency contains only the direct dependency itself
 	if stats.ComponentHighestCriticalityScorePath == nil {
@@ -1017,8 +1036,178 @@ func TestDependencyPathTrackingDirectDependency(t *testing.T) {
 
 	if len(stats.ComponentHighestCriticalityScorePath) >= 1 {
 		pathComponent := stats.ComponentHighestCriticalityScorePath[0]
-		if pathComponent.Name != "direct-high-crit" {
-			t.Errorf("Expected component in path to be 'direct-high-crit', got %s", pathComponent.Name)
+		if pathComponent.Component.Name != "direct-high-crit" {
+			t.Errorf("Expected component in path to be 'direct-high-crit', got %s", pathComponent.Component.Name)
+		}
+	}
+}
+
+func TestDependencyPathContainsTechnicalLagData(t *testing.T) {
+	stats := &TechLagStats{}
+
+	// Create components with specific technical lag data
+	directDep := cdx.Component{
+		BOMRef:  "pkg:npm/direct-dep@1.0.0",
+		Name:    "direct-dep",
+		Version: "1.0.0",
+		Scope:   cdx.ScopeRequired,
+	}
+
+	intermediate := cdx.Component{
+		BOMRef:  "pkg:npm/intermediate@2.0.0",
+		Name:    "intermediate",
+		Version: "2.0.0",
+		Scope:   cdx.ScopeRequired,
+	}
+
+	target := cdx.Component{
+		BOMRef:  "pkg:npm/target@3.0.0",
+		Name:    "target",
+		Version: "3.0.0",
+		Scope:   cdx.ScopeRequired,
+	}
+
+	// Create technical lag data for each component
+	directDepLag := TechnicalLag{
+		Libdays: 15.0,
+		VersionDistance: semver.VersionDistance{
+			MissedReleases: 3,
+			MissedMajor:    1,
+			MissedMinor:    1,
+			MissedPatch:    1,
+		},
+	}
+
+	intermediateLag := TechnicalLag{
+		Libdays: 25.0,
+		VersionDistance: semver.VersionDistance{
+			MissedReleases: 4,
+			MissedMajor:    1,
+			MissedMinor:    2,
+			MissedPatch:    1,
+		},
+	}
+
+	targetLag := TechnicalLag{
+		Libdays: 35.0,
+		VersionDistance: semver.VersionDistance{
+			MissedReleases: 6,
+			MissedMajor:    2,
+			MissedMinor:    2,
+			MissedPatch:    2,
+		},
+	}
+
+	mockBOM := &cdx.BOM{
+		Metadata: &cdx.Metadata{
+			Component: &cdx.Component{
+				BOMRef: "pkg:npm/project@1.0.0",
+				Name:   "test-project",
+			},
+		},
+		Components: &[]cdx.Component{directDep, intermediate, target},
+		Dependencies: &[]cdx.Dependency{
+			{
+				Ref:          "pkg:npm/project@1.0.0",
+				Dependencies: &[]string{"pkg:npm/direct-dep@1.0.0"},
+			},
+			{
+				Ref:          "pkg:npm/direct-dep@1.0.0",
+				Dependencies: &[]string{"pkg:npm/intermediate@2.0.0"},
+			},
+			{
+				Ref:          "pkg:npm/intermediate@2.0.0",
+				Dependencies: &[]string{"pkg:npm/target@3.0.0"},
+			},
+			{
+				Ref:          "pkg:npm/target@3.0.0",
+				Dependencies: &[]string{},
+			},
+		},
+	}
+
+	componentMetrics := map[cdx.Component]TechnicalLag{
+		directDep:    directDepLag,
+		intermediate: intermediateLag,
+		target:       targetLag,
+	}
+
+	targetComponentLag := ComponentLag{
+		Component:        target,
+		TechnicalLag:     targetLag,
+		CriticalityScore: 0.9, // Highest criticality score
+	}
+
+	// Update stats with the target component
+	updateTechLagStats(stats, targetLag, target, targetComponentLag, mockBOM, componentMetrics)
+
+	// Verify that the dependency path is populated
+	if stats.ComponentHighestCriticalityScorePath == nil {
+		t.Fatalf("Expected ComponentHighestCriticalityScorePath to be populated, got nil")
+	}
+
+	expectedPathLength := 3
+	if len(stats.ComponentHighestCriticalityScorePath) != expectedPathLength {
+		t.Errorf("Expected dependency path length to be %d, got %d", expectedPathLength, len(stats.ComponentHighestCriticalityScorePath))
+	}
+
+	// Verify each ComponentLag in the path has correct technical lag data
+	if len(stats.ComponentHighestCriticalityScorePath) >= 1 {
+		directDepComponentLag := stats.ComponentHighestCriticalityScorePath[0]
+		if directDepComponentLag.Component.Name != "direct-dep" {
+			t.Errorf("Expected first component name to be 'direct-dep', got %s", directDepComponentLag.Component.Name)
+		}
+		if directDepComponentLag.TechnicalLag.Libdays != 15.0 {
+			t.Errorf("Expected first component libdays to be 15.0, got %f", directDepComponentLag.TechnicalLag.Libdays)
+		}
+		if directDepComponentLag.TechnicalLag.VersionDistance.MissedReleases != 3 {
+			t.Errorf("Expected first component missed releases to be 3, got %d", directDepComponentLag.TechnicalLag.VersionDistance.MissedReleases)
+		}
+		if directDepComponentLag.CriticalityScore <= 0 {
+			t.Errorf("Expected first component to have a positive criticality score, got %f", directDepComponentLag.CriticalityScore)
+		}
+	}
+
+	if len(stats.ComponentHighestCriticalityScorePath) >= 2 {
+		intermediateComponentLag := stats.ComponentHighestCriticalityScorePath[1]
+		if intermediateComponentLag.Component.Name != "intermediate" {
+			t.Errorf("Expected second component name to be 'intermediate', got %s", intermediateComponentLag.Component.Name)
+		}
+		if intermediateComponentLag.TechnicalLag.Libdays != 25.0 {
+			t.Errorf("Expected second component libdays to be 25.0, got %f", intermediateComponentLag.TechnicalLag.Libdays)
+		}
+		if intermediateComponentLag.TechnicalLag.VersionDistance.MissedReleases != 4 {
+			t.Errorf("Expected second component missed releases to be 4, got %d", intermediateComponentLag.TechnicalLag.VersionDistance.MissedReleases)
+		}
+		if intermediateComponentLag.CriticalityScore <= 0 {
+			t.Errorf("Expected second component to have a positive criticality score, got %f", intermediateComponentLag.CriticalityScore)
+		}
+	}
+
+	if len(stats.ComponentHighestCriticalityScorePath) >= 3 {
+		targetComponentLag := stats.ComponentHighestCriticalityScorePath[2]
+		if targetComponentLag.Component.Name != "target" {
+			t.Errorf("Expected third component name to be 'target', got %s", targetComponentLag.Component.Name)
+		}
+		if targetComponentLag.TechnicalLag.Libdays != 35.0 {
+			t.Errorf("Expected third component libdays to be 35.0, got %f", targetComponentLag.TechnicalLag.Libdays)
+		}
+		if targetComponentLag.TechnicalLag.VersionDistance.MissedReleases != 6 {
+			t.Errorf("Expected third component missed releases to be 6, got %d", targetComponentLag.TechnicalLag.VersionDistance.MissedReleases)
+		}
+		if targetComponentLag.CriticalityScore != 0.9 {
+			t.Errorf("Expected third component criticality score to be 0.9, got %f", targetComponentLag.CriticalityScore)
+		}
+	}
+
+	// Verify that ComponentLag convenience methods work on path elements
+	if len(stats.ComponentHighestCriticalityScorePath) >= 1 {
+		firstComponent := stats.ComponentHighestCriticalityScorePath[0]
+		if firstComponent.Libdays() != 15.0 {
+			t.Errorf("Expected first component Libdays() to return 15.0, got %f", firstComponent.Libdays())
+		}
+		if firstComponent.MissedReleases() != 3 {
+			t.Errorf("Expected first component MissedReleases() to return 3, got %d", firstComponent.MissedReleases())
 		}
 	}
 }
