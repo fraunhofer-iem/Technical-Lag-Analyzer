@@ -377,3 +377,111 @@ func GetDirectDependenciesOf(bom *cdx.BOM, componentRef string) ([]cdx.Component
 
 	return directDeps, nil
 }
+
+// GetDependencyPath finds the dependency path from any direct dependency to a target component.
+// Returns a slice of components representing the path, where the first element is a direct dependency
+// and the last element is the target component. Returns nil if no path is found.
+func GetDependencyPath(bom *cdx.BOM, targetComponentRef string) ([]cdx.Component, error) {
+	if err := ValidateBOM(bom); err != nil {
+		return nil, fmt.Errorf("invalid BOM: %w", err)
+	}
+
+	if targetComponentRef == "" {
+		return nil, fmt.Errorf("empty target component reference provided")
+	}
+
+	// Get direct dependencies first
+	directDeps, err := GetDirectDeps(bom)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get direct dependencies: %w", err)
+	}
+
+	components := *bom.Components
+	dependencies := *bom.Dependencies
+
+	// Create a map for quick component lookup by BOMRef
+	componentMap := make(map[string]cdx.Component)
+	for _, comp := range components {
+		componentMap[comp.BOMRef] = comp
+	}
+
+	// Create a map for quick dependency lookup
+	depMap := make(map[string][]string)
+	for _, dep := range dependencies {
+		if dep.Dependencies != nil {
+			depMap[dep.Ref] = *dep.Dependencies
+		}
+	}
+
+	// Check if target is a direct dependency
+	for _, directDep := range directDeps {
+		if directDep.BOMRef == targetComponentRef {
+			return []cdx.Component{directDep}, nil
+		}
+	}
+
+	// BFS to find shortest path from any direct dependency to target
+	for _, directDep := range directDeps {
+		path := bfsPath(directDep.BOMRef, targetComponentRef, depMap, componentMap)
+		if path != nil {
+			return path, nil
+		}
+	}
+
+	slog.Default().Debug("No dependency path found to target component", "target_ref", targetComponentRef)
+	return nil, nil
+}
+
+// bfsPath performs breadth-first search to find path from start to target
+func bfsPath(startRef, targetRef string, depMap map[string][]string, componentMap map[string]cdx.Component) []cdx.Component {
+	if startRef == targetRef {
+		if comp, exists := componentMap[startRef]; exists {
+			return []cdx.Component{comp}
+		}
+		return nil
+	}
+
+	type pathNode struct {
+		ref  string
+		path []string
+	}
+
+	queue := []pathNode{{ref: startRef, path: []string{startRef}}}
+	visited := make(map[string]bool)
+	visited[startRef] = true
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		// Get dependencies of current component
+		deps, exists := depMap[current.ref]
+		if !exists {
+			continue
+		}
+
+		for _, depRef := range deps {
+			if visited[depRef] {
+				continue
+			}
+
+			newPath := append(current.path, depRef)
+
+			if depRef == targetRef {
+				// Found target, convert path to components
+				var componentPath []cdx.Component
+				for _, ref := range newPath {
+					if comp, exists := componentMap[ref]; exists {
+						componentPath = append(componentPath, comp)
+					}
+				}
+				return componentPath
+			}
+
+			visited[depRef] = true
+			queue = append(queue, pathNode{ref: depRef, path: newPath})
+		}
+	}
+
+	return nil
+}

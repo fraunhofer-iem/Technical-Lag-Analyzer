@@ -8,6 +8,25 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
+// createMockBOM creates a simple mock BOM for testing
+func createMockBOM() *cdx.BOM {
+	return &cdx.BOM{
+		Metadata: &cdx.Metadata{
+			Component: &cdx.Component{
+				BOMRef: "pkg:test/project@1.0.0",
+				Name:   "test-project",
+			},
+		},
+		Components: &[]cdx.Component{},
+		Dependencies: &[]cdx.Dependency{
+			{
+				Ref:          "pkg:test/project@1.0.0",
+				Dependencies: &[]string{},
+			},
+		},
+	}
+}
+
 func TestUpdateTechLagStats(t *testing.T) {
 	stats := &TechLagStats{}
 
@@ -34,7 +53,8 @@ func TestUpdateTechLagStats(t *testing.T) {
 		CriticalityScore: 0.5,
 	}
 
-	updateTechLagStats(stats, technicalLag, component, componentLag)
+	mockBOM := createMockBOM()
+	updateTechLagStats(stats, technicalLag, component, componentLag, mockBOM)
 
 	// Test that all values were properly added
 	if stats.TotalLibdays != 100.5 {
@@ -144,8 +164,9 @@ func TestUpdateTechLagStatsMultipleComponents(t *testing.T) {
 	}
 
 	// Update stats with both components
-	updateTechLagStats(stats, technicalLag1, component1, componentLag1)
-	updateTechLagStats(stats, technicalLag2, component2, componentLag2)
+	mockBOM := createMockBOM()
+	updateTechLagStats(stats, technicalLag1, component1, componentLag1, mockBOM)
+	updateTechLagStats(stats, technicalLag2, component2, componentLag2, mockBOM)
 
 	// Test accumulated values
 	if stats.TotalLibdays != 125.5 {
@@ -286,7 +307,8 @@ func TestTechLagStatsZeroValues(t *testing.T) {
 		CriticalityScore: 0.0,
 	}
 
-	updateTechLagStats(stats, technicalLag, component, componentLag)
+	mockBOM := createMockBOM()
+	updateTechLagStats(stats, technicalLag, component, componentLag, mockBOM)
 
 	// Test that all values are zero
 	if stats.TotalLibdays != 0 {
@@ -568,9 +590,9 @@ func TestComponentScopeSeparation(t *testing.T) {
 		}
 
 		if k.Scope == "" || k.Scope == "required" {
-			updateTechLagStats(&result.Production, v, k, componentLag)
+			updateTechLagStats(&result.Production, v, k, componentLag, createMockBOM())
 		} else {
-			updateTechLagStats(&result.Optional, v, k, componentLag)
+			updateTechLagStats(&result.Optional, v, k, componentLag, createMockBOM())
 		}
 	}
 
@@ -584,9 +606,9 @@ func TestComponentScopeSeparation(t *testing.T) {
 		}
 
 		if dep.Scope == "" || dep.Scope == "required" {
-			updateTechLagStats(&result.DirectProduction, tl, dep, componentLag)
+			updateTechLagStats(&result.DirectProduction, tl, dep, componentLag, createMockBOM())
 		} else {
-			updateTechLagStats(&result.DirectOptional, tl, dep, componentLag)
+			updateTechLagStats(&result.DirectOptional, tl, dep, componentLag, createMockBOM())
 		}
 	}
 
@@ -787,9 +809,10 @@ func TestHighestCriticalityScoreTracking(t *testing.T) {
 	}
 
 	// Update stats with all components
-	updateTechLagStats(stats, technicalLag1, component1, componentLag1)
-	updateTechLagStats(stats, technicalLag2, component2, componentLag2)
-	updateTechLagStats(stats, technicalLag3, component3, componentLag3)
+	mockBOM := createMockBOM()
+	updateTechLagStats(stats, technicalLag1, component1, componentLag1, mockBOM)
+	updateTechLagStats(stats, technicalLag2, component2, componentLag2, mockBOM)
+	updateTechLagStats(stats, technicalLag3, component3, componentLag3, mockBOM)
 
 	// Test that highest criticality score is tracked correctly
 	if stats.HighestCriticalityScore != 0.8 {
@@ -820,5 +843,182 @@ func TestHighestCriticalityScoreTracking(t *testing.T) {
 	// Test that all components were added
 	if len(stats.Components) != 3 {
 		t.Errorf("Expected 3 components in Components slice, got %d", len(stats.Components))
+	}
+}
+
+func TestDependencyPathTracking(t *testing.T) {
+	stats := &TechLagStats{}
+
+	// Create a mock BOM with a dependency chain: direct-dep -> intermediate -> target
+	directDep := cdx.Component{
+		BOMRef:  "pkg:npm/direct-dep@1.0.0",
+		Name:    "direct-dep",
+		Version: "1.0.0",
+		Scope:   cdx.ScopeRequired,
+	}
+
+	intermediate := cdx.Component{
+		BOMRef:  "pkg:npm/intermediate@2.0.0",
+		Name:    "intermediate",
+		Version: "2.0.0",
+		Scope:   cdx.ScopeRequired,
+	}
+
+	target := cdx.Component{
+		BOMRef:  "pkg:npm/target@3.0.0",
+		Name:    "target",
+		Version: "3.0.0",
+		Scope:   cdx.ScopeRequired,
+	}
+
+	mockBOM := &cdx.BOM{
+		Metadata: &cdx.Metadata{
+			Component: &cdx.Component{
+				BOMRef: "pkg:npm/project@1.0.0",
+				Name:   "test-project",
+			},
+		},
+		Components: &[]cdx.Component{directDep, intermediate, target},
+		Dependencies: &[]cdx.Dependency{
+			{
+				Ref:          "pkg:npm/project@1.0.0",
+				Dependencies: &[]string{"pkg:npm/direct-dep@1.0.0"},
+			},
+			{
+				Ref:          "pkg:npm/direct-dep@1.0.0",
+				Dependencies: &[]string{"pkg:npm/intermediate@2.0.0"},
+			},
+			{
+				Ref:          "pkg:npm/intermediate@2.0.0",
+				Dependencies: &[]string{"pkg:npm/target@3.0.0"},
+			},
+			{
+				Ref:          "pkg:npm/target@3.0.0",
+				Dependencies: &[]string{},
+			},
+		},
+	}
+
+	// Create technical lag data for the target component (highest criticality)
+	technicalLag := TechnicalLag{
+		Libdays: 30.0,
+		VersionDistance: semver.VersionDistance{
+			MissedReleases: 5,
+			MissedMajor:    1,
+			MissedMinor:    2,
+			MissedPatch:    2,
+		},
+	}
+
+	componentLag := ComponentLag{
+		Component:        target,
+		TechnicalLag:     technicalLag,
+		CriticalityScore: 0.9, // Highest criticality score
+	}
+
+	// Update stats with the target component
+	updateTechLagStats(stats, technicalLag, target, componentLag, mockBOM)
+
+	// Verify that the highest criticality component is set correctly
+	if stats.ComponentHighestCriticalityScore.Name != "target" {
+		t.Errorf("Expected ComponentHighestCriticalityScore name to be 'target', got %s", stats.ComponentHighestCriticalityScore.Name)
+	}
+
+	// Verify that the dependency path is populated and correct
+	if stats.ComponentHighestCriticalityScorePath == nil {
+		t.Fatalf("Expected ComponentHighestCriticalityScorePath to be populated, got nil")
+	}
+
+	expectedPathLength := 3 // direct-dep -> intermediate -> target
+	if len(stats.ComponentHighestCriticalityScorePath) != expectedPathLength {
+		t.Errorf("Expected dependency path length to be %d, got %d", expectedPathLength, len(stats.ComponentHighestCriticalityScorePath))
+	}
+
+	// Verify the path order: first element should be direct dependency, last should be target
+	if len(stats.ComponentHighestCriticalityScorePath) >= 1 {
+		firstComponent := stats.ComponentHighestCriticalityScorePath[0]
+		if firstComponent.Name != "direct-dep" {
+			t.Errorf("Expected first component in path to be 'direct-dep', got %s", firstComponent.Name)
+		}
+	}
+
+	if len(stats.ComponentHighestCriticalityScorePath) >= 2 {
+		secondComponent := stats.ComponentHighestCriticalityScorePath[1]
+		if secondComponent.Name != "intermediate" {
+			t.Errorf("Expected second component in path to be 'intermediate', got %s", secondComponent.Name)
+		}
+	}
+
+	if len(stats.ComponentHighestCriticalityScorePath) >= 3 {
+		lastComponent := stats.ComponentHighestCriticalityScorePath[2]
+		if lastComponent.Name != "target" {
+			t.Errorf("Expected last component in path to be 'target', got %s", lastComponent.Name)
+		}
+	}
+}
+
+func TestDependencyPathTrackingDirectDependency(t *testing.T) {
+	stats := &TechLagStats{}
+
+	// Create a mock BOM where the highest criticality component is a direct dependency
+	directDep := cdx.Component{
+		BOMRef:  "pkg:npm/direct-high-crit@1.0.0",
+		Name:    "direct-high-crit",
+		Version: "1.0.0",
+		Scope:   cdx.ScopeRequired,
+	}
+
+	mockBOM := &cdx.BOM{
+		Metadata: &cdx.Metadata{
+			Component: &cdx.Component{
+				BOMRef: "pkg:npm/project@1.0.0",
+				Name:   "test-project",
+			},
+		},
+		Components: &[]cdx.Component{directDep},
+		Dependencies: &[]cdx.Dependency{
+			{
+				Ref:          "pkg:npm/project@1.0.0",
+				Dependencies: &[]string{"pkg:npm/direct-high-crit@1.0.0"},
+			},
+			{
+				Ref:          "pkg:npm/direct-high-crit@1.0.0",
+				Dependencies: &[]string{},
+			},
+		},
+	}
+
+	technicalLag := TechnicalLag{
+		Libdays: 20.0,
+		VersionDistance: semver.VersionDistance{
+			MissedReleases: 3,
+			MissedMajor:    1,
+			MissedMinor:    1,
+			MissedPatch:    1,
+		},
+	}
+
+	componentLag := ComponentLag{
+		Component:        directDep,
+		TechnicalLag:     technicalLag,
+		CriticalityScore: 0.8,
+	}
+
+	updateTechLagStats(stats, technicalLag, directDep, componentLag, mockBOM)
+
+	// Verify that the dependency path for a direct dependency contains only the direct dependency itself
+	if stats.ComponentHighestCriticalityScorePath == nil {
+		t.Fatalf("Expected ComponentHighestCriticalityScorePath to be populated, got nil")
+	}
+
+	if len(stats.ComponentHighestCriticalityScorePath) != 1 {
+		t.Errorf("Expected dependency path length for direct dependency to be 1, got %d", len(stats.ComponentHighestCriticalityScorePath))
+	}
+
+	if len(stats.ComponentHighestCriticalityScorePath) >= 1 {
+		pathComponent := stats.ComponentHighestCriticalityScorePath[0]
+		if pathComponent.Name != "direct-high-crit" {
+			t.Errorf("Expected component in path to be 'direct-high-crit', got %s", pathComponent.Name)
+		}
 	}
 }

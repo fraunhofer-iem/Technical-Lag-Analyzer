@@ -75,7 +75,7 @@ func (calc *Calculator) Calculate(ctx context.Context, bom *cdx.BOM) (map[cdx.Co
 
 	// Start worker goroutines
 	var wg sync.WaitGroup
-	for i := 0; i < calc.maxWorkers; i++ {
+	for range calc.maxWorkers {
 		wg.Add(1)
 		go calc.worker(ctx, &wg, jobs, results)
 	}
@@ -211,13 +211,14 @@ func Calculate(ctx context.Context, bom *cdx.BOM) (map[cdx.Component]TechnicalLa
 
 // TechLagStats aggregates technical lag statistics
 type TechLagStats struct {
-	HighestLibdays                   float64        `json:"highestLibdays"`
-	HighestMissedReleases            int64          `json:"highestMissedReleases"`
-	HighestCriticalityScore          float64        `json:"highestCriticalityScore"`
-	ComponentHighestMissedReleases   cdx.Component  `json:"componentHighestMissedReleases"`
-	ComponentHighestLibdays          cdx.Component  `json:"componentHighestLibdays"`
-	ComponentHighestCriticalityScore cdx.Component  `json:"componentHighestCriticalityScore"`
-	Components                       []ComponentLag `json:"components"`
+	HighestLibdays                       float64         `json:"highestLibdays"`
+	HighestMissedReleases                int64           `json:"highestMissedReleases"`
+	HighestCriticalityScore              float64         `json:"highestCriticalityScore"`
+	ComponentHighestMissedReleases       cdx.Component   `json:"componentHighestMissedReleases"`
+	ComponentHighestLibdays              cdx.Component   `json:"componentHighestLibdays"`
+	ComponentHighestCriticalityScore     cdx.Component   `json:"componentHighestCriticalityScore"`
+	ComponentHighestCriticalityScorePath []cdx.Component `json:"componentHighestCriticalityScorePath"`
+	Components                           []ComponentLag  `json:"components"`
 	// Computed fields for serialization
 	TotalLibdays        float64 `json:"totalLibdays"`
 	TotalMissedReleases int64   `json:"totalMissedReleases"`
@@ -349,9 +350,9 @@ func CreateResult(bom *cdx.BOM, componentMetrics map[cdx.Component]TechnicalLag)
 		}
 
 		if isProductionScope(component.Scope) {
-			updateTechLagStats(&result.Production, lag, component, componentLag)
+			updateTechLagStats(&result.Production, lag, component, componentLag, bom)
 		} else {
-			updateTechLagStats(&result.Optional, lag, component, componentLag)
+			updateTechLagStats(&result.Optional, lag, component, componentLag, bom)
 		}
 	}
 
@@ -390,9 +391,9 @@ func CreateResult(bom *cdx.BOM, componentMetrics map[cdx.Component]TechnicalLag)
 				}
 
 				if isProductionScope(dep.Scope) {
-					updateTechLagStats(&result.DirectProduction, lag, dep, componentLag)
+					updateTechLagStats(&result.DirectProduction, lag, dep, componentLag, bom)
 				} else {
-					updateTechLagStats(&result.DirectOptional, lag, dep, componentLag)
+					updateTechLagStats(&result.DirectOptional, lag, dep, componentLag, bom)
 				}
 			}
 		}
@@ -413,7 +414,7 @@ func isProductionScope(scope cdx.Scope) bool {
 }
 
 // updateTechLagStats updates aggregate statistics with component data
-func updateTechLagStats(stats *TechLagStats, lag TechnicalLag, component cdx.Component, componentLag ComponentLag) {
+func updateTechLagStats(stats *TechLagStats, lag TechnicalLag, component cdx.Component, componentLag ComponentLag, bom *cdx.BOM) {
 	stats.Components = append(stats.Components, componentLag)
 
 	// Update computed totals
@@ -435,6 +436,20 @@ func updateTechLagStats(stats *TechLagStats, lag TechnicalLag, component cdx.Com
 	if componentLag.CriticalityScore > stats.HighestCriticalityScore {
 		stats.HighestCriticalityScore = componentLag.CriticalityScore
 		stats.ComponentHighestCriticalityScore = component
+
+		// Find and store the dependency path to this component
+		path, err := sbom.GetDependencyPath(bom, component.BOMRef)
+		if err != nil {
+			slog.Default().Warn("Failed to get dependency path for highest criticality component",
+				"component", component.Name, "ref", component.BOMRef, "error", err)
+			stats.ComponentHighestCriticalityScorePath = nil
+		} else {
+			stats.ComponentHighestCriticalityScorePath = path
+			if path != nil {
+				slog.Default().Debug("Found dependency path for highest criticality component",
+					"component", component.Name, "path_length", len(path))
+			}
+		}
 	}
 }
 
