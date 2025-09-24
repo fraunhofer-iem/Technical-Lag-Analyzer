@@ -395,12 +395,12 @@ func TestResultStringFormat(t *testing.T) {
 	}
 
 	result := Result{
-		Production: TechLagStats{
+		TransitiveProduction: TechLagStats{
 			HighestLibdays:        100.25,
 			HighestMissedReleases: 10,
 			Components:            []ComponentLag{prodComp1, prodComp2},
 		},
-		Optional: TechLagStats{
+		TransitiveOptional: TechLagStats{
 			HighestLibdays:        50.25,
 			HighestMissedReleases: 6,
 			Components:            []ComponentLag{optComp},
@@ -418,8 +418,8 @@ func TestResultStringFormat(t *testing.T) {
 	}
 
 	// Compute totals for the manually created stats
-	result.Production.computeTotals()
-	result.Optional.computeTotals()
+	result.TransitiveProduction.computeTotals()
+	result.TransitiveOptional.computeTotals()
 	result.DirectProduction.computeTotals()
 	result.DirectOptional.computeTotals()
 
@@ -581,10 +581,10 @@ func TestComponentScopeSeparation(t *testing.T) {
 
 	// Create result manually to test component separation
 	result := Result{
-		Optional:         TechLagStats{Components: make([]ComponentLag, 0)},
-		Production:       TechLagStats{Components: make([]ComponentLag, 0)},
-		DirectOptional:   TechLagStats{Components: make([]ComponentLag, 0)},
-		DirectProduction: TechLagStats{Components: make([]ComponentLag, 0)},
+		TransitiveOptional:   TechLagStats{Components: make([]ComponentLag, 0)},
+		TransitiveProduction: TechLagStats{Components: make([]ComponentLag, 0)},
+		DirectOptional:       TechLagStats{Components: make([]ComponentLag, 0)},
+		DirectProduction:     TechLagStats{Components: make([]ComponentLag, 0)},
 	}
 
 	// Process all components (both direct and indirect)
@@ -597,9 +597,9 @@ func TestComponentScopeSeparation(t *testing.T) {
 
 		componentMetrics := map[cdx.Component]TechnicalLag{k: v}
 		if k.Scope == "" || k.Scope == "required" {
-			updateTechLagStats(&result.Production, v, k, componentLag, createMockBOM(), componentMetrics)
+			updateTechLagStats(&result.TransitiveProduction, v, k, componentLag, createMockBOM(), componentMetrics)
 		} else {
-			updateTechLagStats(&result.Optional, v, k, componentLag, createMockBOM(), componentMetrics)
+			updateTechLagStats(&result.TransitiveOptional, v, k, componentLag, createMockBOM(), componentMetrics)
 		}
 	}
 
@@ -620,13 +620,13 @@ func TestComponentScopeSeparation(t *testing.T) {
 		}
 	}
 
-	// Test Production components
-	if len(result.Production.Components) != 2 {
-		t.Errorf("Expected 2 production components, got %d", len(result.Production.Components))
+	// Test TransitiveProduction components
+	if len(result.TransitiveProduction.Components) != 2 {
+		t.Errorf("Expected 2 transitive production components, got %d", len(result.TransitiveProduction.Components))
 	}
 
-	prodNames := make([]string, len(result.Production.Components))
-	for i, comp := range result.Production.Components {
+	prodNames := make([]string, len(result.TransitiveProduction.Components))
+	for i, comp := range result.TransitiveProduction.Components {
 		prodNames[i] = comp.Component.Name
 	}
 
@@ -637,13 +637,13 @@ func TestComponentScopeSeparation(t *testing.T) {
 		t.Error("Expected direct-prod in production components")
 	}
 
-	// Test Optional components
-	if len(result.Optional.Components) != 2 {
-		t.Errorf("Expected 2 optional components, got %d", len(result.Optional.Components))
+	// Test TransitiveOptional components
+	if len(result.TransitiveOptional.Components) != 2 {
+		t.Errorf("Expected 2 transitive optional components, got %d", len(result.TransitiveOptional.Components))
 	}
 
-	optNames := make([]string, len(result.Optional.Components))
-	for i, comp := range result.Optional.Components {
+	optNames := make([]string, len(result.TransitiveOptional.Components))
+	for i, comp := range result.TransitiveOptional.Components {
 		optNames[i] = comp.Component.Name
 	}
 
@@ -673,11 +673,11 @@ func TestComponentScopeSeparation(t *testing.T) {
 	}
 
 	// Test that statistics match the number of components
-	if result.Production.TotalNumComponents != 2 {
-		t.Errorf("Expected Production.TotalNumComponents to be 2, got %d", result.Production.TotalNumComponents)
+	if result.TransitiveProduction.TotalNumComponents != 2 {
+		t.Errorf("Expected TransitiveProduction.TotalNumComponents to be 2, got %d", result.TransitiveProduction.TotalNumComponents)
 	}
-	if result.Optional.TotalNumComponents != 2 {
-		t.Errorf("Expected Optional.TotalNumComponents to be 2, got %d", result.Optional.TotalNumComponents)
+	if result.TransitiveOptional.TotalNumComponents != 2 {
+		t.Errorf("Expected TransitiveOptional.TotalNumComponents to be 2, got %d", result.TransitiveOptional.TotalNumComponents)
 	}
 	if result.DirectProduction.TotalNumComponents != 1 {
 		t.Errorf("Expected DirectProduction.TotalNumComponents to be 1, got %d", result.DirectProduction.TotalNumComponents)
@@ -743,11 +743,11 @@ func TestCriticalityScoreCalculation(t *testing.T) {
 	}
 
 	// Check that criticality scores are present and calculated
-	if len(result.Production.Components) == 0 {
-		t.Fatal("Expected at least one production component")
+	if len(result.TransitiveProduction.Components) == 0 {
+		t.Fatal("Expected at least one transitive production component")
 	}
 
-	for _, comp := range result.Production.Components {
+	for _, comp := range result.TransitiveProduction.Components {
 		if comp.CriticalityScore < 0 {
 			t.Errorf("Expected CriticalityScore to be >= 0, got %f for component %s",
 				comp.CriticalityScore, comp.Component.Name)
